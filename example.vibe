@@ -1,0 +1,40 @@
+@mood("romantic")
+
+Let x be as radiant as the number 4;
+Let y be as radiant as the number 5;
+Let result be as radiant as the number 0;
+
+result = x + y;
+Whisper "Sum is:";
+Whisper result;
+
+result = x - y;
+Whisper "Difference is:";
+Whisper result;
+
+result = x * y;
+Whisper "Product is:";
+Whisper result;
+
+result = x / y;
+Whisper "Division is:";
+Whisper result;
+
+result = x % y;
+Whisper "Remainder is:";
+Whisper result;
+
+Let name be as radiant as the number 0;
+name = "Rose";
+Whisper "Hello, beautiful ";
+Whisper name;
+
+If x greater y Then
+    Whisper "x is greater than y";
+EndIf
+
+If y greater x Then
+    Whisper "This shouldn't print - y is NOT greater than x";
+Else
+    Whisper "y is not greater than x";
+EndIf

@@ -1,0 +1,1139 @@
+State 4 conflicts: 7 shift/reduce
+State 28 conflicts: 1 reduce/reduce
+State 48 conflicts: 1 shift/reduce
+State 64 conflicts: 7 shift/reduce
+State 78 conflicts: 7 shift/reduce
+
+
+Grammar
+
+    0 $accept: program $end
+
+    1 program: mood_declaration statements
+
+    2 mood_declaration: MOOD_SARCASTIC
+    3                 | MOOD_ROMANTIC
+    4                 | ε
+
+    5 statements: statements statement
+    6           | statement
+    7           | ε
+
+    8 statement: variable_decl SEMICOLON
+    9          | expression SEMICOLON
+   10          | print_statement SEMICOLON
+   11          | if_statement
+
+   12 variable_decl: romantic_decl
+   13              | sarcastic_decl
+   14              | IDENTIFIER ASSIGN expression
+   15              | IDENTIFIER ASSIGN STRING_LITERAL
+
+   16 romantic_decl: LET identifier_term BE AS RADIANT AS THE NUMBER INTEGER
+
+   17 sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW INTEGER SARCASTIC_REV
+
+   18 print_statement: PRINT print_value
+
+   19 print_value: expression
+   20            | STRING_LITERAL
+   21            | identifier_term
+
+   22 $@1: ε
+
+   23 if_statement: IF condition THEN $@1 if_block
+
+   24 if_block: if_true_block ENDIF
+
+   25 $@2: ε
+
+   26 if_block: if_true_block ELSE $@2 if_false_block ENDIF
+
+   27 if_true_block: statements
+
+   28 if_false_block: statements
+
+   29 condition: expression EQ expression
+   30          | expression GT expression
+   31          | expression LT expression
+   32          | NOT condition
+   33          | LPAREN condition RPAREN
+   34          | expression
+
+   35 identifier_term: IDENTIFIER
+
+   36 expression: INTEGER
+   37           | identifier_term
+   38           | expression PLUS expression
+   39           | expression MINUS expression
+   40           | expression TIMES expression
+   41           | expression DIVIDE expression
+   42           | expression MOD expression
+   43           | LPAREN expression RPAREN
+
+
+Terminals, with rules where they appear
+
+    $end (0) 0
+    error (256)
+    MOOD_SARCASTIC (258) 2
+    MOOD_ROMANTIC (259) 3
+    LET (260) 16
+    BE (261) 16
+    AS (262) 16
+    RADIANT (263) 16
+    THE (264) 16
+    NUMBER (265) 16
+    IS (266) 17
+    SARCASTIC_WOW (267) 17
+    SARCASTIC_NOW (268) 17
+    SARCASTIC_REV (269) 17
+    PLUS (270) 38
+    MINUS (271) 39
+    TIMES (272) 40
+    DIVIDE (273) 41
+    MOD (274) 42
+    ASSIGN (275) 14 15
+    SEMICOLON (276) 8 9 10
+    LPAREN (277) 33 43
+    RPAREN (278) 33 43
+    PRINT (279) 18
+    IF (280) 23
+    THEN (281) 23
+    ELSE (282) 26
+    ENDIF (283) 24 26
+    EQ (284) 29
+    GT (285) 30
+    LT (286) 31
+    NOT (287) 32
+    INTEGER <num> (288) 16 17 36
+    IDENTIFIER <str> (289) 14 15 35
+    STRING_LITERAL <str> (290) 15 20
+
+
+Nonterminals, with rules where they appear
+
+    $accept (36)
+        on left: 0
+    program (37)
+        on left: 1
+        on right: 0
+    mood_declaration (38)
+        on left: 2 3 4
+        on right: 1
+    statements (39)
+        on left: 5 6 7
+        on right: 1 5 27 28
+    statement (40)
+        on left: 8 9 10 11
+        on right: 5 6
+    variable_decl (41)
+        on left: 12 13 14 15
+        on right: 8
+    romantic_decl <str> (42)
+        on left: 16
+        on right: 12
+    sarcastic_decl <str> (43)
+        on left: 17
+        on right: 13
+    print_statement (44)
+        on left: 18
+        on right: 10
+    print_value <str> (45)
+        on left: 19 20 21
+        on right: 18
+    if_statement <num> (46)
+        on left: 23
+        on right: 11
+    $@1 (47)
+        on left: 22
+        on right: 23
+    if_block <num> (48)
+        on left: 24 26
+        on right: 23
+    $@2 (49)
+        on left: 25
+        on right: 26
+    if_true_block <num> (50)
+        on left: 27
+        on right: 24 26
+    if_false_block <num> (51)
+        on left: 28
+        on right: 26
+    condition <num> (52)
+        on left: 29 30 31 32 33 34
+        on right: 23 32 33
+    identifier_term <str> (53)
+        on left: 35
+        on right: 16 17 21 37
+    expression <num> (54)
+        on left: 36 37 38 39 40 41 42 43
+        on right: 9 14 19 29 30 31 34 38 39 40 41 42 43
+
+
+State 0
+
+    0 $accept: • program $end
+
+    MOOD_SARCASTIC  shift, and go to state 1
+    MOOD_ROMANTIC   shift, and go to state 2
+
+    $default  reduce using rule 4 (mood_declaration)
+
+    program           go to state 3
+    mood_declaration  go to state 4
+
+
+State 1
+
+    2 mood_declaration: MOOD_SARCASTIC •
+
+    $default  reduce using rule 2 (mood_declaration)
+
+
+State 2
+
+    3 mood_declaration: MOOD_ROMANTIC •
+
+    $default  reduce using rule 3 (mood_declaration)
+
+
+State 3
+
+    0 $accept: program • $end
+
+    $end  shift, and go to state 5
+
+
+State 4
+
+    1 program: mood_declaration • statements
+
+    LET            shift, and go to state 6
+    SARCASTIC_WOW  shift, and go to state 7
+    LPAREN         shift, and go to state 8
+    PRINT          shift, and go to state 9
+    IF             shift, and go to state 10
+    INTEGER        shift, and go to state 11
+    IDENTIFIER     shift, and go to state 12
+
+    LET            [reduce using rule 7 (statements)]
+    SARCASTIC_WOW  [reduce using rule 7 (statements)]
+    LPAREN         [reduce using rule 7 (statements)]
+    PRINT          [reduce using rule 7 (statements)]
+    IF             [reduce using rule 7 (statements)]
+    INTEGER        [reduce using rule 7 (statements)]
+    IDENTIFIER     [reduce using rule 7 (statements)]
+    $default       reduce using rule 7 (statements)
+
+    statements       go to state 13
+    statement        go to state 14
+    variable_decl    go to state 15
+    romantic_decl    go to state 16
+    sarcastic_decl   go to state 17
+    print_statement  go to state 18
+    if_statement     go to state 19
+    identifier_term  go to state 20
+    expression       go to state 21
+
+
+State 5
+
+    0 $accept: program $end •
+
+    $default  accept
+
+
+State 6
+
+   16 romantic_decl: LET • identifier_term BE AS RADIANT AS THE NUMBER INTEGER
+
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 23
+
+
+State 7
+
+   17 sarcastic_decl: SARCASTIC_WOW • identifier_term IS SARCASTIC_NOW INTEGER SARCASTIC_REV
+
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 24
+
+
+State 8
+
+   43 expression: LPAREN • expression RPAREN
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 25
+
+
+State 9
+
+   18 print_statement: PRINT • print_value
+
+    LPAREN          shift, and go to state 8
+    INTEGER         shift, and go to state 11
+    IDENTIFIER      shift, and go to state 22
+    STRING_LITERAL  shift, and go to state 26
+
+    print_value      go to state 27
+    identifier_term  go to state 28
+    expression       go to state 29
+
+
+State 10
+
+   23 if_statement: IF • condition THEN $@1 if_block
+
+    LPAREN      shift, and go to state 30
+    NOT         shift, and go to state 31
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    condition        go to state 32
+    identifier_term  go to state 20
+    expression       go to state 33
+
+
+State 11
+
+   36 expression: INTEGER •
+
+    $default  reduce using rule 36 (expression)
+
+
+State 12
+
+   14 variable_decl: IDENTIFIER • ASSIGN expression
+   15              | IDENTIFIER • ASSIGN STRING_LITERAL
+   35 identifier_term: IDENTIFIER •
+
+    ASSIGN  shift, and go to state 34
+
+    $default  reduce using rule 35 (identifier_term)
+
+
+State 13
+
+    1 program: mood_declaration statements •
+    5 statements: statements • statement
+
+    LET            shift, and go to state 6
+    SARCASTIC_WOW  shift, and go to state 7
+    LPAREN         shift, and go to state 8
+    PRINT          shift, and go to state 9
+    IF             shift, and go to state 10
+    INTEGER        shift, and go to state 11
+    IDENTIFIER     shift, and go to state 12
+
+    $default  reduce using rule 1 (program)
+
+    statement        go to state 35
+    variable_decl    go to state 15
+    romantic_decl    go to state 16
+    sarcastic_decl   go to state 17
+    print_statement  go to state 18
+    if_statement     go to state 19
+    identifier_term  go to state 20
+    expression       go to state 21
+
+
+State 14
+
+    6 statements: statement •
+
+    $default  reduce using rule 6 (statements)
+
+
+State 15
+
+    8 statement: variable_decl • SEMICOLON
+
+    SEMICOLON  shift, and go to state 36
+
+
+State 16
+
+   12 variable_decl: romantic_decl •
+
+    $default  reduce using rule 12 (variable_decl)
+
+
+State 17
+
+   13 variable_decl: sarcastic_decl •
+
+    $default  reduce using rule 13 (variable_decl)
+
+
+State 18
+
+   10 statement: print_statement • SEMICOLON
+
+    SEMICOLON  shift, and go to state 37
+
+
+State 19
+
+   11 statement: if_statement •
+
+    $default  reduce using rule 11 (statement)
+
+
+State 20
+
+   37 expression: identifier_term •
+
+    $default  reduce using rule 37 (expression)
+
+
+State 21
+
+    9 statement: expression • SEMICOLON
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    PLUS       shift, and go to state 38
+    MINUS      shift, and go to state 39
+    TIMES      shift, and go to state 40
+    DIVIDE     shift, and go to state 41
+    MOD        shift, and go to state 42
+    SEMICOLON  shift, and go to state 43
+
+
+State 22
+
+   35 identifier_term: IDENTIFIER •
+
+    $default  reduce using rule 35 (identifier_term)
+
+
+State 23
+
+   16 romantic_decl: LET identifier_term • BE AS RADIANT AS THE NUMBER INTEGER
+
+    BE  shift, and go to state 44
+
+
+State 24
+
+   17 sarcastic_decl: SARCASTIC_WOW identifier_term • IS SARCASTIC_NOW INTEGER SARCASTIC_REV
+
+    IS  shift, and go to state 45
+
+
+State 25
+
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+   43           | LPAREN expression • RPAREN
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+    RPAREN  shift, and go to state 46
+
+
+State 26
+
+   20 print_value: STRING_LITERAL •
+
+    $default  reduce using rule 20 (print_value)
+
+
+State 27
+
+   18 print_statement: PRINT print_value •
+
+    $default  reduce using rule 18 (print_statement)
+
+
+State 28
+
+   21 print_value: identifier_term •
+   37 expression: identifier_term •
+
+    SEMICOLON  reduce using rule 21 (print_value)
+    SEMICOLON  [reduce using rule 37 (expression)]
+    $default   reduce using rule 37 (expression)
+
+
+State 29
+
+   19 print_value: expression •
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+
+    $default  reduce using rule 19 (print_value)
+
+
+State 30
+
+   33 condition: LPAREN • condition RPAREN
+   43 expression: LPAREN • expression RPAREN
+
+    LPAREN      shift, and go to state 30
+    NOT         shift, and go to state 31
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    condition        go to state 47
+    identifier_term  go to state 20
+    expression       go to state 48
+
+
+State 31
+
+   32 condition: NOT • condition
+
+    LPAREN      shift, and go to state 30
+    NOT         shift, and go to state 31
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    condition        go to state 49
+    identifier_term  go to state 20
+    expression       go to state 33
+
+
+State 32
+
+   23 if_statement: IF condition • THEN $@1 if_block
+
+    THEN  shift, and go to state 50
+
+
+State 33
+
+   29 condition: expression • EQ expression
+   30          | expression • GT expression
+   31          | expression • LT expression
+   34          | expression •
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+    EQ      shift, and go to state 51
+    GT      shift, and go to state 52
+    LT      shift, and go to state 53
+
+    $default  reduce using rule 34 (condition)
+
+
+State 34
+
+   14 variable_decl: IDENTIFIER ASSIGN • expression
+   15              | IDENTIFIER ASSIGN • STRING_LITERAL
+
+    LPAREN          shift, and go to state 8
+    INTEGER         shift, and go to state 11
+    IDENTIFIER      shift, and go to state 22
+    STRING_LITERAL  shift, and go to state 54
+
+    identifier_term  go to state 20
+    expression       go to state 55
+
+
+State 35
+
+    5 statements: statements statement •
+
+    $default  reduce using rule 5 (statements)
+
+
+State 36
+
+    8 statement: variable_decl SEMICOLON •
+
+    $default  reduce using rule 8 (statement)
+
+
+State 37
+
+   10 statement: print_statement SEMICOLON •
+
+    $default  reduce using rule 10 (statement)
+
+
+State 38
+
+   38 expression: expression PLUS • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 56
+
+
+State 39
+
+   39 expression: expression MINUS • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 57
+
+
+State 40
+
+   40 expression: expression TIMES • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 58
+
+
+State 41
+
+   41 expression: expression DIVIDE • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 59
+
+
+State 42
+
+   42 expression: expression MOD • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 60
+
+
+State 43
+
+    9 statement: expression SEMICOLON •
+
+    $default  reduce using rule 9 (statement)
+
+
+State 44
+
+   16 romantic_decl: LET identifier_term BE • AS RADIANT AS THE NUMBER INTEGER
+
+    AS  shift, and go to state 61
+
+
+State 45
+
+   17 sarcastic_decl: SARCASTIC_WOW identifier_term IS • SARCASTIC_NOW INTEGER SARCASTIC_REV
+
+    SARCASTIC_NOW  shift, and go to state 62
+
+
+State 46
+
+   43 expression: LPAREN expression RPAREN •
+
+    $default  reduce using rule 43 (expression)
+
+
+State 47
+
+   33 condition: LPAREN condition • RPAREN
+
+    RPAREN  shift, and go to state 63
+
+
+State 48
+
+   29 condition: expression • EQ expression
+   30          | expression • GT expression
+   31          | expression • LT expression
+   34          | expression •
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+   43           | LPAREN expression • RPAREN
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+    RPAREN  shift, and go to state 46
+    EQ      shift, and go to state 51
+    GT      shift, and go to state 52
+    LT      shift, and go to state 53
+
+    RPAREN  [reduce using rule 34 (condition)]
+
+
+State 49
+
+   32 condition: NOT condition •
+
+    $default  reduce using rule 32 (condition)
+
+
+State 50
+
+   23 if_statement: IF condition THEN • $@1 if_block
+
+    $default  reduce using rule 22 ($@1)
+
+    $@1  go to state 64
+
+
+State 51
+
+   29 condition: expression EQ • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 65
+
+
+State 52
+
+   30 condition: expression GT • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 66
+
+
+State 53
+
+   31 condition: expression LT • expression
+
+    LPAREN      shift, and go to state 8
+    INTEGER     shift, and go to state 11
+    IDENTIFIER  shift, and go to state 22
+
+    identifier_term  go to state 20
+    expression       go to state 67
+
+
+State 54
+
+   15 variable_decl: IDENTIFIER ASSIGN STRING_LITERAL •
+
+    $default  reduce using rule 15 (variable_decl)
+
+
+State 55
+
+   14 variable_decl: IDENTIFIER ASSIGN expression •
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+
+    $default  reduce using rule 14 (variable_decl)
+
+
+State 56
+
+   38 expression: expression • PLUS expression
+   38           | expression PLUS expression •
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+
+    $default  reduce using rule 38 (expression)
+
+
+State 57
+
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   39           | expression MINUS expression •
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+
+    $default  reduce using rule 39 (expression)
+
+
+State 58
+
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   40           | expression TIMES expression •
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    $default  reduce using rule 40 (expression)
+
+
+State 59
+
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   41           | expression DIVIDE expression •
+   42           | expression • MOD expression
+
+    $default  reduce using rule 41 (expression)
+
+
+State 60
+
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+   42           | expression MOD expression •
+
+    $default  reduce using rule 42 (expression)
+
+
+State 61
+
+   16 romantic_decl: LET identifier_term BE AS • RADIANT AS THE NUMBER INTEGER
+
+    RADIANT  shift, and go to state 68
+
+
+State 62
+
+   17 sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW • INTEGER SARCASTIC_REV
+
+    INTEGER  shift, and go to state 69
+
+
+State 63
+
+   33 condition: LPAREN condition RPAREN •
+
+    $default  reduce using rule 33 (condition)
+
+
+State 64
+
+   23 if_statement: IF condition THEN $@1 • if_block
+
+    LET            shift, and go to state 6
+    SARCASTIC_WOW  shift, and go to state 7
+    LPAREN         shift, and go to state 8
+    PRINT          shift, and go to state 9
+    IF             shift, and go to state 10
+    INTEGER        shift, and go to state 11
+    IDENTIFIER     shift, and go to state 12
+
+    LET            [reduce using rule 7 (statements)]
+    SARCASTIC_WOW  [reduce using rule 7 (statements)]
+    LPAREN         [reduce using rule 7 (statements)]
+    PRINT          [reduce using rule 7 (statements)]
+    IF             [reduce using rule 7 (statements)]
+    INTEGER        [reduce using rule 7 (statements)]
+    IDENTIFIER     [reduce using rule 7 (statements)]
+    $default       reduce using rule 7 (statements)
+
+    statements       go to state 70
+    statement        go to state 14
+    variable_decl    go to state 15
+    romantic_decl    go to state 16
+    sarcastic_decl   go to state 17
+    print_statement  go to state 18
+    if_statement     go to state 19
+    if_block         go to state 71
+    if_true_block    go to state 72
+    identifier_term  go to state 20
+    expression       go to state 21
+
+
+State 65
+
+   29 condition: expression EQ expression •
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+
+    $default  reduce using rule 29 (condition)
+
+
+State 66
+
+   30 condition: expression GT expression •
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+
+    $default  reduce using rule 30 (condition)
+
+
+State 67
+
+   31 condition: expression LT expression •
+   38 expression: expression • PLUS expression
+   39           | expression • MINUS expression
+   40           | expression • TIMES expression
+   41           | expression • DIVIDE expression
+   42           | expression • MOD expression
+
+    PLUS    shift, and go to state 38
+    MINUS   shift, and go to state 39
+    TIMES   shift, and go to state 40
+    DIVIDE  shift, and go to state 41
+    MOD     shift, and go to state 42
+
+    $default  reduce using rule 31 (condition)
+
+
+State 68
+
+   16 romantic_decl: LET identifier_term BE AS RADIANT • AS THE NUMBER INTEGER
+
+    AS  shift, and go to state 73
+
+
+State 69
+
+   17 sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW INTEGER • SARCASTIC_REV
+
+    SARCASTIC_REV  shift, and go to state 74
+
+
+State 70
+
+    5 statements: statements • statement
+   27 if_true_block: statements •
+
+    LET            shift, and go to state 6
+    SARCASTIC_WOW  shift, and go to state 7
+    LPAREN         shift, and go to state 8
+    PRINT          shift, and go to state 9
+    IF             shift, and go to state 10
+    INTEGER        shift, and go to state 11
+    IDENTIFIER     shift, and go to state 12
+
+    $default  reduce using rule 27 (if_true_block)
+
+    statement        go to state 35
+    variable_decl    go to state 15
+    romantic_decl    go to state 16
+    sarcastic_decl   go to state 17
+    print_statement  go to state 18
+    if_statement     go to state 19
+    identifier_term  go to state 20
+    expression       go to state 21
+
+
+State 71
+
+   23 if_statement: IF condition THEN $@1 if_block •
+
+    $default  reduce using rule 23 (if_statement)
+
+
+State 72
+
+   24 if_block: if_true_block • ENDIF
+   26         | if_true_block • ELSE $@2 if_false_block ENDIF
+
+    ELSE   shift, and go to state 75
+    ENDIF  shift, and go to state 76
+
+
+State 73
+
+   16 romantic_decl: LET identifier_term BE AS RADIANT AS • THE NUMBER INTEGER
+
+    THE  shift, and go to state 77
+
+
+State 74
+
+   17 sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW INTEGER SARCASTIC_REV •
+
+    $default  reduce using rule 17 (sarcastic_decl)
+
+
+State 75
+
+   26 if_block: if_true_block ELSE • $@2 if_false_block ENDIF
+
+    $default  reduce using rule 25 ($@2)
+
+    $@2  go to state 78
+
+
+State 76
+
+   24 if_block: if_true_block ENDIF •
+
+    $default  reduce using rule 24 (if_block)
+
+
+State 77
+
+   16 romantic_decl: LET identifier_term BE AS RADIANT AS THE • NUMBER INTEGER
+
+    NUMBER  shift, and go to state 79
+
+
+State 78
+
+   26 if_block: if_true_block ELSE $@2 • if_false_block ENDIF
+
+    LET            shift, and go to state 6
+    SARCASTIC_WOW  shift, and go to state 7
+    LPAREN         shift, and go to state 8
+    PRINT          shift, and go to state 9
+    IF             shift, and go to state 10
+    INTEGER        shift, and go to state 11
+    IDENTIFIER     shift, and go to state 12
+
+    LET            [reduce using rule 7 (statements)]
+    SARCASTIC_WOW  [reduce using rule 7 (statements)]
+    LPAREN         [reduce using rule 7 (statements)]
+    PRINT          [reduce using rule 7 (statements)]
+    IF             [reduce using rule 7 (statements)]
+    INTEGER        [reduce using rule 7 (statements)]
+    IDENTIFIER     [reduce using rule 7 (statements)]
+    $default       reduce using rule 7 (statements)
+
+    statements       go to state 80
+    statement        go to state 14
+    variable_decl    go to state 15
+    romantic_decl    go to state 16
+    sarcastic_decl   go to state 17
+    print_statement  go to state 18
+    if_statement     go to state 19
+    if_false_block   go to state 81
+    identifier_term  go to state 20
+    expression       go to state 21
+
+
+State 79
+
+   16 romantic_decl: LET identifier_term BE AS RADIANT AS THE NUMBER • INTEGER
+
+    INTEGER  shift, and go to state 82
+
+
+State 80
+
+    5 statements: statements • statement
+   28 if_false_block: statements •
+
+    LET            shift, and go to state 6
+    SARCASTIC_WOW  shift, and go to state 7
+    LPAREN         shift, and go to state 8
+    PRINT          shift, and go to state 9
+    IF             shift, and go to state 10
+    INTEGER        shift, and go to state 11
+    IDENTIFIER     shift, and go to state 12
+
+    $default  reduce using rule 28 (if_false_block)
+
+    statement        go to state 35
+    variable_decl    go to state 15
+    romantic_decl    go to state 16
+    sarcastic_decl   go to state 17
+    print_statement  go to state 18
+    if_statement     go to state 19
+    identifier_term  go to state 20
+    expression       go to state 21
+
+
+State 81
+
+   26 if_block: if_true_block ELSE $@2 if_false_block • ENDIF
+
+    ENDIF  shift, and go to state 83
+
+
+State 82
+
+   16 romantic_decl: LET identifier_term BE AS RADIANT AS THE NUMBER INTEGER •
+
+    $default  reduce using rule 16 (romantic_decl)
+
+
+State 83
+
+   26 if_block: if_true_block ELSE $@2 if_false_block ENDIF •
+
+    $default  reduce using rule 26 (if_block)

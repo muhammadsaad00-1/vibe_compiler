@@ -73,9 +73,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mood.h"
-
+#include "vibeparser_llvm.h"
 Mood current_mood = NEUTRAL;
 extern int yylex();
+extern void init_llvm_ir_generation();
 extern FILE *yyin;
 void yyerror(const char *s);
 
@@ -196,7 +197,7 @@ void cleanup_symbols() {
     sym_count = 0;
 }
 
-#line 200 "vibeparser.tab.c"
+#line 201 "vibeparser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -668,11 +669,11 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   161,   161,   165,   166,   167,   171,   172,   173,   177,
-     178,   183,   184,   188,   189,   190,   191,   195,   206,   217,
-     233,   238,   239,   252,   252,   264,   265,   265,   278,   282,
-     286,   287,   288,   289,   290,   291,   295,   299,   300,   304,
-     305,   306,   307,   315,   323
+       0,   162,   162,   166,   167,   168,   172,   173,   174,   178,
+     179,   184,   185,   189,   190,   191,   192,   196,   207,   218,
+     234,   239,   240,   253,   253,   265,   266,   266,   279,   283,
+     287,   288,   289,   290,   291,   292,   296,   300,   301,   305,
+     306,   307,   308,   316,   324
 };
 #endif
 
@@ -1291,59 +1292,59 @@ yyreduce:
   switch (yyn)
     {
   case 3: /* mood_declaration: MOOD_SARCASTIC  */
-#line 165 "vibeparser.y"
+#line 166 "vibeparser.y"
                    { current_mood = SARCASTIC; }
-#line 1297 "vibeparser.tab.c"
+#line 1298 "vibeparser.tab.c"
     break;
 
   case 4: /* mood_declaration: MOOD_ROMANTIC  */
-#line 166 "vibeparser.y"
+#line 167 "vibeparser.y"
                     { current_mood = ROMANTIC; }
-#line 1303 "vibeparser.tab.c"
+#line 1304 "vibeparser.tab.c"
     break;
 
   case 5: /* mood_declaration: %empty  */
-#line 167 "vibeparser.y"
+#line 168 "vibeparser.y"
                   { current_mood = NEUTRAL; }
-#line 1309 "vibeparser.tab.c"
+#line 1310 "vibeparser.tab.c"
     break;
 
   case 10: /* statement: expression SEMICOLON  */
-#line 178 "vibeparser.y"
+#line 179 "vibeparser.y"
                            { 
         if (current_mood != SARCASTIC && current_mood != ROMANTIC && !skip_until_endif) {
             printf("Expression result: %d\n", (yyvsp[-1].num)); 
         }
     }
-#line 1319 "vibeparser.tab.c"
+#line 1320 "vibeparser.tab.c"
     break;
 
   case 13: /* variable_decl: romantic_decl  */
-#line 188 "vibeparser.y"
+#line 189 "vibeparser.y"
                   { if (!skip_until_endif) { printf("ROMANTIC DECL: %s\n", (yyvsp[0].str)); free((yyvsp[0].str)); } }
-#line 1325 "vibeparser.tab.c"
+#line 1326 "vibeparser.tab.c"
     break;
 
   case 14: /* variable_decl: sarcastic_decl  */
-#line 189 "vibeparser.y"
+#line 190 "vibeparser.y"
                      { if (!skip_until_endif) { printf("SARCASTIC DECL: %s\n", (yyvsp[0].str)); free((yyvsp[0].str)); } }
-#line 1331 "vibeparser.tab.c"
+#line 1332 "vibeparser.tab.c"
     break;
 
   case 15: /* variable_decl: IDENTIFIER ASSIGN expression  */
-#line 190 "vibeparser.y"
+#line 191 "vibeparser.y"
                                    { if (!skip_until_endif) { add_symbol((yyvsp[-2].str), (yyvsp[0].num)); free((yyvsp[-2].str)); } }
-#line 1337 "vibeparser.tab.c"
+#line 1338 "vibeparser.tab.c"
     break;
 
   case 16: /* variable_decl: IDENTIFIER ASSIGN STRING_LITERAL  */
-#line 191 "vibeparser.y"
+#line 192 "vibeparser.y"
                                        { if (!skip_until_endif) { add_string_symbol((yyvsp[-2].str), (yyvsp[0].str)); free((yyvsp[-2].str)); free((yyvsp[0].str)); } }
-#line 1343 "vibeparser.tab.c"
+#line 1344 "vibeparser.tab.c"
     break;
 
   case 17: /* romantic_decl: LET identifier_term BE AS RADIANT AS THE NUMBER INTEGER  */
-#line 195 "vibeparser.y"
+#line 196 "vibeparser.y"
                                                             {
         (yyval.str) = malloc(100);
         sprintf((yyval.str), "int %s = %d;", (yyvsp[-7].str), (yyvsp[0].num));
@@ -1352,11 +1353,11 @@ yyreduce:
         }
         free((yyvsp[-7].str));
     }
-#line 1356 "vibeparser.tab.c"
+#line 1357 "vibeparser.tab.c"
     break;
 
   case 18: /* sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW INTEGER SARCASTIC_REV  */
-#line 206 "vibeparser.y"
+#line 207 "vibeparser.y"
                                                                          {
         (yyval.str) = malloc(100);
         sprintf((yyval.str), "int %s = %d; // Revolutionary", (yyvsp[-4].str), (yyvsp[-1].num));
@@ -1365,11 +1366,11 @@ yyreduce:
         }
         free((yyvsp[-4].str));
     }
-#line 1369 "vibeparser.tab.c"
+#line 1370 "vibeparser.tab.c"
     break;
 
   case 19: /* print_statement: PRINT print_value  */
-#line 217 "vibeparser.y"
+#line 218 "vibeparser.y"
                       {
         if (!skip_until_endif) {
             if (current_mood == SARCASTIC) {
@@ -1383,27 +1384,27 @@ yyreduce:
         }
         free((yyvsp[0].str));
     }
-#line 1387 "vibeparser.tab.c"
+#line 1388 "vibeparser.tab.c"
     break;
 
   case 20: /* print_value: expression  */
-#line 233 "vibeparser.y"
+#line 234 "vibeparser.y"
                {
         char buffer[32];
         sprintf(buffer, "%d", (yyvsp[0].num));
         (yyval.str) = strdup(buffer);
     }
-#line 1397 "vibeparser.tab.c"
+#line 1398 "vibeparser.tab.c"
     break;
 
   case 21: /* print_value: STRING_LITERAL  */
-#line 238 "vibeparser.y"
+#line 239 "vibeparser.y"
                      { (yyval.str) = (yyvsp[0].str); }
-#line 1403 "vibeparser.tab.c"
+#line 1404 "vibeparser.tab.c"
     break;
 
   case 22: /* print_value: identifier_term  */
-#line 239 "vibeparser.y"
+#line 240 "vibeparser.y"
                       {
         if (is_string_symbol((yyvsp[0].str))) {
             (yyval.str) = get_symbol_string((yyvsp[0].str));
@@ -1414,37 +1415,37 @@ yyreduce:
         }
         free((yyvsp[0].str));
     }
-#line 1418 "vibeparser.tab.c"
+#line 1419 "vibeparser.tab.c"
     break;
 
   case 23: /* $@1: %empty  */
-#line 252 "vibeparser.y"
+#line 253 "vibeparser.y"
                       {
         condition_result = (yyvsp[-1].num);
         if (!condition_result) {
             skip_until_endif = 1;  // Skip until we find ELSE or ENDIF
         }
     }
-#line 1429 "vibeparser.tab.c"
+#line 1430 "vibeparser.tab.c"
     break;
 
   case 24: /* if_statement: IF condition THEN $@1 if_block  */
-#line 257 "vibeparser.y"
+#line 258 "vibeparser.y"
                {
         skip_until_endif = 0;  // Reset skipping flag
         (yyval.num) = (yyvsp[0].num);
     }
-#line 1438 "vibeparser.tab.c"
+#line 1439 "vibeparser.tab.c"
     break;
 
   case 25: /* if_block: if_true_block ENDIF  */
-#line 264 "vibeparser.y"
+#line 265 "vibeparser.y"
                         { (yyval.num) = condition_result; }
-#line 1444 "vibeparser.tab.c"
+#line 1445 "vibeparser.tab.c"
     break;
 
   case 26: /* $@2: %empty  */
-#line 265 "vibeparser.y"
+#line 266 "vibeparser.y"
                          {
         if (condition_result) {
             skip_until_endif = 1;  // Skip else block if condition was true
@@ -1452,107 +1453,107 @@ yyreduce:
             skip_until_endif = 0;  // Execute else block if condition was false
         }
     }
-#line 1456 "vibeparser.tab.c"
+#line 1457 "vibeparser.tab.c"
     break;
 
   case 27: /* if_block: if_true_block ELSE $@2 if_false_block ENDIF  */
-#line 271 "vibeparser.y"
+#line 272 "vibeparser.y"
                            {
         skip_until_endif = 0;  // Reset skipping flag
         (yyval.num) = condition_result;
     }
-#line 1465 "vibeparser.tab.c"
+#line 1466 "vibeparser.tab.c"
     break;
 
   case 28: /* if_true_block: statements  */
-#line 278 "vibeparser.y"
+#line 279 "vibeparser.y"
                { (yyval.num) = condition_result; }
-#line 1471 "vibeparser.tab.c"
+#line 1472 "vibeparser.tab.c"
     break;
 
   case 29: /* if_false_block: statements  */
-#line 282 "vibeparser.y"
+#line 283 "vibeparser.y"
                { (yyval.num) = condition_result; }
-#line 1477 "vibeparser.tab.c"
+#line 1478 "vibeparser.tab.c"
     break;
 
   case 30: /* condition: expression EQ expression  */
-#line 286 "vibeparser.y"
+#line 287 "vibeparser.y"
                              { (yyval.num) = ((yyvsp[-2].num) == (yyvsp[0].num)); }
-#line 1483 "vibeparser.tab.c"
+#line 1484 "vibeparser.tab.c"
     break;
 
   case 31: /* condition: expression GT expression  */
-#line 287 "vibeparser.y"
+#line 288 "vibeparser.y"
                                { (yyval.num) = ((yyvsp[-2].num) > (yyvsp[0].num)); }
-#line 1489 "vibeparser.tab.c"
+#line 1490 "vibeparser.tab.c"
     break;
 
   case 32: /* condition: expression LT expression  */
-#line 288 "vibeparser.y"
+#line 289 "vibeparser.y"
                                { (yyval.num) = ((yyvsp[-2].num) < (yyvsp[0].num)); }
-#line 1495 "vibeparser.tab.c"
+#line 1496 "vibeparser.tab.c"
     break;
 
   case 33: /* condition: NOT condition  */
-#line 289 "vibeparser.y"
+#line 290 "vibeparser.y"
                     { (yyval.num) = !(yyvsp[0].num); }
-#line 1501 "vibeparser.tab.c"
+#line 1502 "vibeparser.tab.c"
     break;
 
   case 34: /* condition: LPAREN condition RPAREN  */
-#line 290 "vibeparser.y"
+#line 291 "vibeparser.y"
                               { (yyval.num) = (yyvsp[-1].num); }
-#line 1507 "vibeparser.tab.c"
+#line 1508 "vibeparser.tab.c"
     break;
 
   case 35: /* condition: expression  */
-#line 291 "vibeparser.y"
+#line 292 "vibeparser.y"
                  { (yyval.num) = (yyvsp[0].num) != 0; }
-#line 1513 "vibeparser.tab.c"
+#line 1514 "vibeparser.tab.c"
     break;
 
   case 36: /* identifier_term: IDENTIFIER  */
-#line 295 "vibeparser.y"
+#line 296 "vibeparser.y"
                { (yyval.str) = (yyvsp[0].str); }
-#line 1519 "vibeparser.tab.c"
+#line 1520 "vibeparser.tab.c"
     break;
 
   case 37: /* expression: INTEGER  */
-#line 299 "vibeparser.y"
+#line 300 "vibeparser.y"
             { (yyval.num) = (yyvsp[0].num); }
-#line 1525 "vibeparser.tab.c"
+#line 1526 "vibeparser.tab.c"
     break;
 
   case 38: /* expression: identifier_term  */
-#line 300 "vibeparser.y"
+#line 301 "vibeparser.y"
                       { 
         (yyval.num) = get_symbol_value((yyvsp[0].str));
         free((yyvsp[0].str));
     }
-#line 1534 "vibeparser.tab.c"
+#line 1535 "vibeparser.tab.c"
     break;
 
   case 39: /* expression: expression PLUS expression  */
-#line 304 "vibeparser.y"
+#line 305 "vibeparser.y"
                                  { (yyval.num) = (yyvsp[-2].num) + (yyvsp[0].num); }
-#line 1540 "vibeparser.tab.c"
+#line 1541 "vibeparser.tab.c"
     break;
 
   case 40: /* expression: expression MINUS expression  */
-#line 305 "vibeparser.y"
+#line 306 "vibeparser.y"
                                   { (yyval.num) = (yyvsp[-2].num) - (yyvsp[0].num); }
-#line 1546 "vibeparser.tab.c"
+#line 1547 "vibeparser.tab.c"
     break;
 
   case 41: /* expression: expression TIMES expression  */
-#line 306 "vibeparser.y"
+#line 307 "vibeparser.y"
                                   { (yyval.num) = (yyvsp[-2].num) * (yyvsp[0].num); }
-#line 1552 "vibeparser.tab.c"
+#line 1553 "vibeparser.tab.c"
     break;
 
   case 42: /* expression: expression DIVIDE expression  */
-#line 307 "vibeparser.y"
+#line 308 "vibeparser.y"
                                    { 
         if ((yyvsp[0].num) == 0) {
             yyerror("Division by zero");
@@ -1561,11 +1562,11 @@ yyreduce:
             (yyval.num) = (yyvsp[-2].num) / (yyvsp[0].num); 
         }
     }
-#line 1565 "vibeparser.tab.c"
+#line 1566 "vibeparser.tab.c"
     break;
 
   case 43: /* expression: expression MOD expression  */
-#line 315 "vibeparser.y"
+#line 316 "vibeparser.y"
                                 {
         if ((yyvsp[0].num) == 0) {
             yyerror("Modulo by zero");
@@ -1574,17 +1575,17 @@ yyreduce:
             (yyval.num) = (yyvsp[-2].num) % (yyvsp[0].num);
         }
     }
-#line 1578 "vibeparser.tab.c"
+#line 1579 "vibeparser.tab.c"
     break;
 
   case 44: /* expression: LPAREN expression RPAREN  */
-#line 323 "vibeparser.y"
+#line 324 "vibeparser.y"
                                { (yyval.num) = (yyvsp[-1].num); }
-#line 1584 "vibeparser.tab.c"
+#line 1585 "vibeparser.tab.c"
     break;
 
 
-#line 1588 "vibeparser.tab.c"
+#line 1589 "vibeparser.tab.c"
 
       default: break;
     }
@@ -1777,7 +1778,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 326 "vibeparser.y"
+#line 327 "vibeparser.y"
 
 
 void yyerror(const char *s) {
@@ -1804,7 +1805,8 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         fclose(yyin);
     }
-    
+   
     cleanup_symbols();
+     init_llvm_ir_generation();
     return 0;
 }

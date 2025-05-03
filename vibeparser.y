@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mood.h"
-
+#include "vibeparser_llvm.h"
 Mood current_mood = NEUTRAL;
 extern int yylex();
+extern void init_llvm_ir_generation();
 extern FILE *yyin;
 void yyerror(const char *s);
 
@@ -349,7 +350,8 @@ int main(int argc, char *argv[]) {
     if (argc > 1) {
         fclose(yyin);
     }
-    
+   
     cleanup_symbols();
+     init_llvm_ir_generation();
     return 0;
 }

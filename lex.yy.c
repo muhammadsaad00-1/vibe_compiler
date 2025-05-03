@@ -1,5 +1,6 @@
+#line 1 "lex.yy.c"
 
-#line 2 "lex.yy.c"
+#line 3 "lex.yy.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -548,9 +549,9 @@ char *yytext;
 
 extern Mood current_mood;
 void yyerror(const char *s);
-#line 551 "lex.yy.c"
+#line 552 "lex.yy.c"
 #define YY_NO_INPUT 1
-#line 553 "lex.yy.c"
+#line 554 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -768,7 +769,7 @@ YY_DECL
 #line 20 "vibeparser.l"
 
 
-#line 771 "lex.yy.c"
+#line 772 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1022,7 +1023,7 @@ YY_RULE_SETUP
 #line 73 "vibeparser.l"
 ECHO;
 	YY_BREAK
-#line 1025 "lex.yy.c"
+#line 1026 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 

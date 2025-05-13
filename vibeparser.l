@@ -4,6 +4,7 @@
 #include <string.h>
 #include "mood.h"
 #include "vibeparser.tab.h"
+#include "vibeparser_llvm.h"
 
 extern Mood current_mood;
 void yyerror(const char *s);
@@ -43,10 +44,9 @@ STRING   \"([^\"]|\\.)*\"
 "Else"                    { return ELSE; }
 "EndIf"                   { return ENDIF; }
 
-"equals"                  { return EQ; }
+"equals"                  { return EQ; }  // Added this line
 "greater"                 { return GT; }
 "less"                    { return LT; }
-"not"                     { return NOT; }
 
 "+"                       { return PLUS; }
 "-"                       { return MINUS; }
@@ -61,7 +61,6 @@ STRING   \"([^\"]|\\.)*\"
 {DIGIT}+                  { yylval.num = atoi(yytext); return INTEGER; }
 {ID}                      { yylval.str = strdup(yytext); return IDENTIFIER; }
 {STRING}                  { 
-                            /* Strip the quotes from the string */
                             yytext[strlen(yytext)-1] = '\0';
                             yylval.str = strdup(yytext+1); 
                             return STRING_LITERAL; 

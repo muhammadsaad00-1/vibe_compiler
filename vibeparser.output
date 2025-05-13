@@ -160,13 +160,13 @@ Nonterminals, with rules where they appear
     if_false_block <num> (51)
         on left: 28
         on right: 26
-    condition <num> (52)
+    condition <expr_result> (52)
         on left: 29 30 31 32 33 34
         on right: 23 32 33
     identifier_term <str> (53)
         on left: 35
         on right: 16 17 21 37
-    expression <num> (54)
+    expression <expr_result> (54)
         on left: 36 37 38 39 40 41 42 43
         on right: 9 14 19 29 30 31 34 38 39 40 41 42 43
 

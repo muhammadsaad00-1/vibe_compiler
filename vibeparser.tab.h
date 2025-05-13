@@ -44,6 +44,12 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 178 "vibeparser.y"
+
+    #include "vibeparser_llvm.h"
+
+#line 53 "vibeparser.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -95,12 +101,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 131 "vibeparser.y"
+#line 182 "vibeparser.y"
 
     int num;
     char *str;
+    ExprResult expr_result;
 
-#line 104 "vibeparser.tab.h"
+#line 111 "vibeparser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

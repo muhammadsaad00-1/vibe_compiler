@@ -73,16 +73,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mood.h"
+#include <llvm-c/Core.h>
+#include <llvm-c/ExecutionEngine.h>
+#include <llvm-c/Target.h>
+#include <llvm-c/Analysis.h>
+#include <llvm-c/BitWriter.h>
 #include "vibeparser_llvm.h"
+
 Mood current_mood = NEUTRAL;
 extern int yylex();
-extern void init_llvm_ir_generation();
 extern FILE *yyin;
 void yyerror(const char *s);
 
 /* Flag for controlling conditional execution */
 int condition_result = 0;
-int skip_until_endif = 0;  // New flag to skip statements when condition is false
+int skip_until_endif = 0;
+
+
 
 /* Symbol table for storing variables */
 struct symbol {
@@ -90,11 +97,20 @@ struct symbol {
     int value;
     char *str_value;
     int is_string;
+    LLVMValueRef llvm_value;  // LLVM value reference
 };
 
 #define MAX_SYMBOLS 100
 struct symbol symbol_table[MAX_SYMBOLS];
 int sym_count = 0;
+
+/* LLVM global variables - declared extern to use from vibeparser_llvm.c */
+extern LLVMModuleRef module;
+extern LLVMBuilderRef builder;
+extern LLVMExecutionEngineRef engine;
+extern LLVMPassManagerRef pass_manager;
+extern LLVMValueRef current_function;
+extern LLVMBasicBlockRef current_block;
 
 /* Function to add or update a symbol in the table */
 int add_symbol(char *name, int value) {
@@ -102,6 +118,13 @@ int add_symbol(char *name, int value) {
         if (strcmp(symbol_table[i].name, name) == 0) {
             symbol_table[i].value = value;
             symbol_table[i].is_string = 0;
+            
+            // Generate LLVM IR for variable assignment
+            if (!skip_until_endif) {
+                LLVMValueRef const_val = LLVMConstInt(LLVMInt32Type(), value, 0);
+                gen_variable_decl(name, const_val, 0);
+                symbol_table[i].llvm_value = get_symbol_value_llvm(name);
+            }
             return i;
         }
     }
@@ -114,6 +137,14 @@ int add_symbol(char *name, int value) {
     symbol_table[sym_count].name = strdup(name);
     symbol_table[sym_count].value = value;
     symbol_table[sym_count].is_string = 0;
+    
+    // Generate LLVM IR for new variable
+    if (!skip_until_endif) {
+        LLVMValueRef const_val = LLVMConstInt(LLVMInt32Type(), value, 0);
+        gen_variable_decl(name, const_val, 0);
+        symbol_table[sym_count].llvm_value = get_symbol_value_llvm(name);
+    }
+    
     return sym_count++;
 }
 
@@ -126,6 +157,13 @@ int add_string_symbol(char *name, char *value) {
             }
             symbol_table[i].str_value = strdup(value);
             symbol_table[i].is_string = 1;
+            
+            // Generate LLVM IR for string variable
+            if (!skip_until_endif) {
+                LLVMValueRef str_val = LLVMBuildGlobalStringPtr(builder, value, "str_lit");
+                gen_variable_decl(name, str_val, 1);
+                symbol_table[i].llvm_value = get_symbol_value_llvm(name);
+            }
             return i;
         }
     }
@@ -138,6 +176,14 @@ int add_string_symbol(char *name, char *value) {
     symbol_table[sym_count].name = strdup(name);
     symbol_table[sym_count].str_value = strdup(value);
     symbol_table[sym_count].is_string = 1;
+    
+    // Generate LLVM IR for new string variable
+    if (!skip_until_endif) {
+        LLVMValueRef str_val = LLVMBuildGlobalStringPtr(builder, value, "str_lit");
+        gen_variable_decl(name, str_val, 1);
+        symbol_table[sym_count].llvm_value = get_symbol_value_llvm(name);
+    }
+    
     return sym_count++;
 }
 
@@ -197,7 +243,9 @@ void cleanup_symbols() {
     sym_count = 0;
 }
 
-#line 201 "vibeparser.tab.c"
+/* Remove the ExprResult definition since it's already in the header */
+
+#line 249 "vibeparser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -669,11 +717,11 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   162,   162,   166,   167,   168,   172,   173,   174,   178,
-     179,   184,   185,   189,   190,   191,   192,   196,   207,   218,
-     234,   239,   240,   253,   253,   265,   266,   266,   279,   283,
-     287,   288,   289,   290,   291,   292,   296,   300,   301,   305,
-     306,   307,   308,   316,   324
+       0,   214,   214,   222,   223,   224,   228,   229,   230,   234,
+     235,   240,   241,   245,   246,   247,   253,   263,   274,   285,
+     338,   343,   344,   358,   358,   375,   382,   382,   405,   409,
+     412,   421,   430,   439,   447,   448,   460,   464,   472,   486,
+     494,   502,   510,   524,   538
 };
 #endif
 
@@ -1291,60 +1339,81 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
+  case 2: /* program: mood_declaration statements  */
+#line 214 "vibeparser.y"
+                                {
+        if (!skip_until_endif) {
+            finalize_llvm("output.ll");
+        }
+    }
+#line 1350 "vibeparser.tab.c"
+    break;
+
   case 3: /* mood_declaration: MOOD_SARCASTIC  */
-#line 166 "vibeparser.y"
+#line 222 "vibeparser.y"
                    { current_mood = SARCASTIC; }
-#line 1298 "vibeparser.tab.c"
+#line 1356 "vibeparser.tab.c"
     break;
 
   case 4: /* mood_declaration: MOOD_ROMANTIC  */
-#line 167 "vibeparser.y"
+#line 223 "vibeparser.y"
                     { current_mood = ROMANTIC; }
-#line 1304 "vibeparser.tab.c"
+#line 1362 "vibeparser.tab.c"
     break;
 
   case 5: /* mood_declaration: %empty  */
-#line 168 "vibeparser.y"
+#line 224 "vibeparser.y"
                   { current_mood = NEUTRAL; }
-#line 1310 "vibeparser.tab.c"
+#line 1368 "vibeparser.tab.c"
     break;
 
   case 10: /* statement: expression SEMICOLON  */
-#line 179 "vibeparser.y"
+#line 235 "vibeparser.y"
                            { 
         if (current_mood != SARCASTIC && current_mood != ROMANTIC && !skip_until_endif) {
-            printf("Expression result: %d\n", (yyvsp[-1].num)); 
+            printf("Expression result: %d\n", (yyvsp[-1].expr_result).value); 
         }
     }
-#line 1320 "vibeparser.tab.c"
+#line 1378 "vibeparser.tab.c"
     break;
 
   case 13: /* variable_decl: romantic_decl  */
-#line 189 "vibeparser.y"
+#line 245 "vibeparser.y"
                   { if (!skip_until_endif) { printf("ROMANTIC DECL: %s\n", (yyvsp[0].str)); free((yyvsp[0].str)); } }
-#line 1326 "vibeparser.tab.c"
+#line 1384 "vibeparser.tab.c"
     break;
 
   case 14: /* variable_decl: sarcastic_decl  */
-#line 190 "vibeparser.y"
+#line 246 "vibeparser.y"
                      { if (!skip_until_endif) { printf("SARCASTIC DECL: %s\n", (yyvsp[0].str)); free((yyvsp[0].str)); } }
-#line 1332 "vibeparser.tab.c"
+#line 1390 "vibeparser.tab.c"
     break;
 
   case 15: /* variable_decl: IDENTIFIER ASSIGN expression  */
-#line 191 "vibeparser.y"
-                                   { if (!skip_until_endif) { add_symbol((yyvsp[-2].str), (yyvsp[0].num)); free((yyvsp[-2].str)); } }
-#line 1338 "vibeparser.tab.c"
+#line 247 "vibeparser.y"
+                                   { 
+        if (!skip_until_endif) { 
+            add_symbol((yyvsp[-2].str), (yyvsp[0].expr_result).value); 
+            free((yyvsp[-2].str)); 
+        } 
+    }
+#line 1401 "vibeparser.tab.c"
     break;
 
   case 16: /* variable_decl: IDENTIFIER ASSIGN STRING_LITERAL  */
-#line 192 "vibeparser.y"
-                                       { if (!skip_until_endif) { add_string_symbol((yyvsp[-2].str), (yyvsp[0].str)); free((yyvsp[-2].str)); free((yyvsp[0].str)); } }
-#line 1344 "vibeparser.tab.c"
+#line 253 "vibeparser.y"
+                                       { 
+        if (!skip_until_endif) { 
+            add_string_symbol((yyvsp[-2].str), (yyvsp[0].str)); 
+            free((yyvsp[-2].str)); 
+            free((yyvsp[0].str)); 
+        } 
+    }
+#line 1413 "vibeparser.tab.c"
     break;
 
   case 17: /* romantic_decl: LET identifier_term BE AS RADIANT AS THE NUMBER INTEGER  */
-#line 196 "vibeparser.y"
+#line 263 "vibeparser.y"
                                                             {
         (yyval.str) = malloc(100);
         sprintf((yyval.str), "int %s = %d;", (yyvsp[-7].str), (yyvsp[0].num));
@@ -1353,11 +1422,11 @@ yyreduce:
         }
         free((yyvsp[-7].str));
     }
-#line 1357 "vibeparser.tab.c"
+#line 1426 "vibeparser.tab.c"
     break;
 
   case 18: /* sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW INTEGER SARCASTIC_REV  */
-#line 207 "vibeparser.y"
+#line 274 "vibeparser.y"
                                                                          {
         (yyval.str) = malloc(100);
         sprintf((yyval.str), "int %s = %d; // Revolutionary", (yyvsp[-4].str), (yyvsp[-1].num));
@@ -1366,11 +1435,11 @@ yyreduce:
         }
         free((yyvsp[-4].str));
     }
-#line 1370 "vibeparser.tab.c"
+#line 1439 "vibeparser.tab.c"
     break;
 
   case 19: /* print_statement: PRINT print_value  */
-#line 218 "vibeparser.y"
+#line 285 "vibeparser.y"
                       {
         if (!skip_until_endif) {
             if (current_mood == SARCASTIC) {
@@ -1381,30 +1450,67 @@ yyreduce:
                 printf("Output: %s", (yyvsp[0].str));
             }
             printf("\n");
+            
+            // Generate LLVM IR for print statement
+            LLVMValueRef print_val = NULL;
+            int is_string = 0;
+            
+            // Check if it's a string literal or variable
+            for (int i = 0; i < sym_count; i++) {
+                if (symbol_table[i].name && strcmp(symbol_table[i].name, (yyvsp[0].str)) == 0) {
+                    is_string = symbol_table[i].is_string;
+                    if (is_string) {
+                        print_val = LLVMBuildLoad2(builder, LLVMPointerType(LLVMInt8Type(), 0), 
+                                                   symbol_table[i].llvm_value, "strload");
+                    } else {
+                        print_val = LLVMBuildLoad2(builder, LLVMInt32Type(), 
+                                                   symbol_table[i].llvm_value, "intload");
+                    }
+                    break;
+                }
+            }
+            
+            // If it's not a variable, it might be a literal
+            if (print_val == NULL) {
+                // Try to parse as integer
+                char *endptr;
+                long val = strtol((yyvsp[0].str), &endptr, 10);
+                if (*endptr == '\0') {
+                    // It's an integer literal
+                    print_val = LLVMConstInt(LLVMInt32Type(), val, 0);
+                    is_string = 0;
+                } else {
+                    // It's a string literal
+                    print_val = LLVMBuildGlobalStringPtr(builder, (yyvsp[0].str), "str_print");
+                    is_string = 1;
+                }
+            }
+            
+            gen_print(print_val, is_string);
         }
         free((yyvsp[0].str));
     }
-#line 1388 "vibeparser.tab.c"
+#line 1494 "vibeparser.tab.c"
     break;
 
   case 20: /* print_value: expression  */
-#line 234 "vibeparser.y"
+#line 338 "vibeparser.y"
                {
         char buffer[32];
-        sprintf(buffer, "%d", (yyvsp[0].num));
+        sprintf(buffer, "%d", (yyvsp[0].expr_result).value);
         (yyval.str) = strdup(buffer);
     }
-#line 1398 "vibeparser.tab.c"
+#line 1504 "vibeparser.tab.c"
     break;
 
   case 21: /* print_value: STRING_LITERAL  */
-#line 239 "vibeparser.y"
+#line 343 "vibeparser.y"
                      { (yyval.str) = (yyvsp[0].str); }
-#line 1404 "vibeparser.tab.c"
+#line 1510 "vibeparser.tab.c"
     break;
 
   case 22: /* print_value: identifier_term  */
-#line 240 "vibeparser.y"
+#line 344 "vibeparser.y"
                       {
         if (is_string_symbol((yyvsp[0].str))) {
             (yyval.str) = get_symbol_string((yyvsp[0].str));
@@ -1415,177 +1521,287 @@ yyreduce:
         }
         free((yyvsp[0].str));
     }
-#line 1419 "vibeparser.tab.c"
+#line 1525 "vibeparser.tab.c"
     break;
 
   case 23: /* $@1: %empty  */
-#line 253 "vibeparser.y"
+#line 358 "vibeparser.y"
                       {
-        condition_result = (yyvsp[-1].num);
+        condition_result = (yyvsp[-1].expr_result).value;
         if (!condition_result) {
-            skip_until_endif = 1;  // Skip until we find ELSE or ENDIF
+            skip_until_endif = 1;
+        }
+        
+        // Generate LLVM IR for if statement
+        if (!skip_until_endif && (yyvsp[-1].expr_result).llvm_value) {
+            start_if_statement((yyvsp[-1].expr_result).llvm_value);
         }
     }
-#line 1430 "vibeparser.tab.c"
-    break;
-
-  case 24: /* if_statement: IF condition THEN $@1 if_block  */
-#line 258 "vibeparser.y"
-               {
-        skip_until_endif = 0;  // Reset skipping flag
-        (yyval.num) = (yyvsp[0].num);
-    }
-#line 1439 "vibeparser.tab.c"
-    break;
-
-  case 25: /* if_block: if_true_block ENDIF  */
-#line 265 "vibeparser.y"
-                        { (yyval.num) = condition_result; }
-#line 1445 "vibeparser.tab.c"
-    break;
-
-  case 26: /* $@2: %empty  */
-#line 266 "vibeparser.y"
-                         {
-        if (condition_result) {
-            skip_until_endif = 1;  // Skip else block if condition was true
-        } else {
-            skip_until_endif = 0;  // Execute else block if condition was false
-        }
-    }
-#line 1457 "vibeparser.tab.c"
-    break;
-
-  case 27: /* if_block: if_true_block ELSE $@2 if_false_block ENDIF  */
-#line 272 "vibeparser.y"
-                           {
-        skip_until_endif = 0;  // Reset skipping flag
-        (yyval.num) = condition_result;
-    }
-#line 1466 "vibeparser.tab.c"
-    break;
-
-  case 28: /* if_true_block: statements  */
-#line 279 "vibeparser.y"
-               { (yyval.num) = condition_result; }
-#line 1472 "vibeparser.tab.c"
-    break;
-
-  case 29: /* if_false_block: statements  */
-#line 283 "vibeparser.y"
-               { (yyval.num) = condition_result; }
-#line 1478 "vibeparser.tab.c"
-    break;
-
-  case 30: /* condition: expression EQ expression  */
-#line 287 "vibeparser.y"
-                             { (yyval.num) = ((yyvsp[-2].num) == (yyvsp[0].num)); }
-#line 1484 "vibeparser.tab.c"
-    break;
-
-  case 31: /* condition: expression GT expression  */
-#line 288 "vibeparser.y"
-                               { (yyval.num) = ((yyvsp[-2].num) > (yyvsp[0].num)); }
-#line 1490 "vibeparser.tab.c"
-    break;
-
-  case 32: /* condition: expression LT expression  */
-#line 289 "vibeparser.y"
-                               { (yyval.num) = ((yyvsp[-2].num) < (yyvsp[0].num)); }
-#line 1496 "vibeparser.tab.c"
-    break;
-
-  case 33: /* condition: NOT condition  */
-#line 290 "vibeparser.y"
-                    { (yyval.num) = !(yyvsp[0].num); }
-#line 1502 "vibeparser.tab.c"
-    break;
-
-  case 34: /* condition: LPAREN condition RPAREN  */
-#line 291 "vibeparser.y"
-                              { (yyval.num) = (yyvsp[-1].num); }
-#line 1508 "vibeparser.tab.c"
-    break;
-
-  case 35: /* condition: expression  */
-#line 292 "vibeparser.y"
-                 { (yyval.num) = (yyvsp[0].num) != 0; }
-#line 1514 "vibeparser.tab.c"
-    break;
-
-  case 36: /* identifier_term: IDENTIFIER  */
-#line 296 "vibeparser.y"
-               { (yyval.str) = (yyvsp[0].str); }
-#line 1520 "vibeparser.tab.c"
-    break;
-
-  case 37: /* expression: INTEGER  */
-#line 300 "vibeparser.y"
-            { (yyval.num) = (yyvsp[0].num); }
-#line 1526 "vibeparser.tab.c"
-    break;
-
-  case 38: /* expression: identifier_term  */
-#line 301 "vibeparser.y"
-                      { 
-        (yyval.num) = get_symbol_value((yyvsp[0].str));
-        free((yyvsp[0].str));
-    }
-#line 1535 "vibeparser.tab.c"
-    break;
-
-  case 39: /* expression: expression PLUS expression  */
-#line 305 "vibeparser.y"
-                                 { (yyval.num) = (yyvsp[-2].num) + (yyvsp[0].num); }
 #line 1541 "vibeparser.tab.c"
     break;
 
-  case 40: /* expression: expression MINUS expression  */
-#line 306 "vibeparser.y"
-                                  { (yyval.num) = (yyvsp[-2].num) - (yyvsp[0].num); }
-#line 1547 "vibeparser.tab.c"
+  case 24: /* if_statement: IF condition THEN $@1 if_block  */
+#line 368 "vibeparser.y"
+               {
+        skip_until_endif = 0;
+        (yyval.num) = (yyvsp[0].num);
+    }
+#line 1550 "vibeparser.tab.c"
     break;
 
-  case 41: /* expression: expression TIMES expression  */
-#line 307 "vibeparser.y"
-                                  { (yyval.num) = (yyvsp[-2].num) * (yyvsp[0].num); }
-#line 1553 "vibeparser.tab.c"
-    break;
-
-  case 42: /* expression: expression DIVIDE expression  */
-#line 308 "vibeparser.y"
-                                   { 
-        if ((yyvsp[0].num) == 0) {
-            yyerror("Division by zero");
-            (yyval.num) = 0;
-        } else {
-            (yyval.num) = (yyvsp[-2].num) / (yyvsp[0].num); 
+  case 25: /* if_block: if_true_block ENDIF  */
+#line 375 "vibeparser.y"
+                        { 
+        (yyval.num) = condition_result; 
+        // End if statement in LLVM IR
+        if (!skip_until_endif) {
+            end_if_statement();
         }
     }
-#line 1566 "vibeparser.tab.c"
+#line 1562 "vibeparser.tab.c"
     break;
 
-  case 43: /* expression: expression MOD expression  */
-#line 316 "vibeparser.y"
-                                {
-        if ((yyvsp[0].num) == 0) {
-            yyerror("Modulo by zero");
-            (yyval.num) = 0;
+  case 26: /* $@2: %empty  */
+#line 382 "vibeparser.y"
+                         {
+        if (condition_result) {
+            skip_until_endif = 1;
         } else {
-            (yyval.num) = (yyvsp[-2].num) % (yyvsp[0].num);
+            skip_until_endif = 0;
+        }
+        
+        // Generate LLVM IR for else part
+        if (!skip_until_endif) {
+            handle_else();
         }
     }
 #line 1579 "vibeparser.tab.c"
     break;
 
+  case 27: /* if_block: if_true_block ELSE $@2 if_false_block ENDIF  */
+#line 393 "vibeparser.y"
+                           {
+        skip_until_endif = 0;
+        (yyval.num) = condition_result;
+        
+        // End if statement in LLVM IR
+        if (!skip_until_endif) {
+            end_if_statement();
+        }
+    }
+#line 1593 "vibeparser.tab.c"
+    break;
+
+  case 28: /* if_true_block: statements  */
+#line 405 "vibeparser.y"
+               { (yyval.num) = condition_result; }
+#line 1599 "vibeparser.tab.c"
+    break;
+
+  case 29: /* if_false_block: statements  */
+#line 409 "vibeparser.y"
+               { (yyval.num) = condition_result; }
+#line 1605 "vibeparser.tab.c"
+    break;
+
+  case 30: /* condition: expression EQ expression  */
+#line 412 "vibeparser.y"
+                             { 
+        int result = ((yyvsp[-2].expr_result).value == (yyvsp[0].expr_result).value);
+        (yyval.expr_result).value = result;
+        if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+            (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, EQ, (yyvsp[0].expr_result).llvm_value);
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1619 "vibeparser.tab.c"
+    break;
+
+  case 31: /* condition: expression GT expression  */
+#line 421 "vibeparser.y"
+                               { 
+        int result = ((yyvsp[-2].expr_result).value > (yyvsp[0].expr_result).value);
+        (yyval.expr_result).value = result;
+        if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+            (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, GT, (yyvsp[0].expr_result).llvm_value);
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1633 "vibeparser.tab.c"
+    break;
+
+  case 32: /* condition: expression LT expression  */
+#line 430 "vibeparser.y"
+                               { 
+        int result = ((yyvsp[-2].expr_result).value < (yyvsp[0].expr_result).value);
+        (yyval.expr_result).value = result;
+        if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+            (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, LT, (yyvsp[0].expr_result).llvm_value);
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1647 "vibeparser.tab.c"
+    break;
+
+  case 33: /* condition: NOT condition  */
+#line 439 "vibeparser.y"
+                    { 
+        (yyval.expr_result).value = !(yyvsp[0].expr_result).value;
+        if (!skip_until_endif && (yyvsp[0].expr_result).llvm_value) {
+            (yyval.expr_result).llvm_value = LLVMBuildNot(builder, (yyvsp[0].expr_result).llvm_value, "nottmp");
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1660 "vibeparser.tab.c"
+    break;
+
+  case 34: /* condition: LPAREN condition RPAREN  */
+#line 447 "vibeparser.y"
+                              { (yyval.expr_result) = (yyvsp[-1].expr_result); }
+#line 1666 "vibeparser.tab.c"
+    break;
+
+  case 35: /* condition: expression  */
+#line 448 "vibeparser.y"
+                 { 
+        (yyval.expr_result).value = (yyvsp[0].expr_result).value != 0;
+        if (!skip_until_endif && (yyvsp[0].expr_result).llvm_value) {
+            LLVMValueRef zero = LLVMConstInt(LLVMInt32Type(), 0, 0);
+            (yyval.expr_result).llvm_value = LLVMBuildICmp(builder, LLVMIntNE, (yyvsp[0].expr_result).llvm_value, zero, "condtmp");
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1680 "vibeparser.tab.c"
+    break;
+
+  case 36: /* identifier_term: IDENTIFIER  */
+#line 460 "vibeparser.y"
+               { (yyval.str) = (yyvsp[0].str); }
+#line 1686 "vibeparser.tab.c"
+    break;
+
+  case 37: /* expression: INTEGER  */
+#line 464 "vibeparser.y"
+            { 
+        (yyval.expr_result).value = (yyvsp[0].num);
+        if (!skip_until_endif) {
+            (yyval.expr_result).llvm_value = gen_expression((yyvsp[0].num));
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1699 "vibeparser.tab.c"
+    break;
+
+  case 38: /* expression: identifier_term  */
+#line 472 "vibeparser.y"
+                      { 
+        (yyval.expr_result).value = get_symbol_value((yyvsp[0].str));
+        if (!skip_until_endif) {
+            LLVMValueRef sym_val = get_symbol_value_llvm((yyvsp[0].str));
+            if (sym_val) {
+                (yyval.expr_result).llvm_value = LLVMBuildLoad2(builder, LLVMInt32Type(), sym_val, "varload");
+            } else {
+                (yyval.expr_result).llvm_value = NULL;
+            }
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+        free((yyvsp[0].str));
+    }
+#line 1718 "vibeparser.tab.c"
+    break;
+
+  case 39: /* expression: expression PLUS expression  */
+#line 486 "vibeparser.y"
+                                 { 
+        (yyval.expr_result).value = (yyvsp[-2].expr_result).value + (yyvsp[0].expr_result).value;
+        if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+            (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, PLUS, (yyvsp[0].expr_result).llvm_value);
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1731 "vibeparser.tab.c"
+    break;
+
+  case 40: /* expression: expression MINUS expression  */
+#line 494 "vibeparser.y"
+                                  { 
+        (yyval.expr_result).value = (yyvsp[-2].expr_result).value - (yyvsp[0].expr_result).value;
+        if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+            (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, MINUS, (yyvsp[0].expr_result).llvm_value);
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1744 "vibeparser.tab.c"
+    break;
+
+  case 41: /* expression: expression TIMES expression  */
+#line 502 "vibeparser.y"
+                                  { 
+        (yyval.expr_result).value = (yyvsp[-2].expr_result).value * (yyvsp[0].expr_result).value;
+        if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+            (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, TIMES, (yyvsp[0].expr_result).llvm_value);
+        } else {
+            (yyval.expr_result).llvm_value = NULL;
+        }
+    }
+#line 1757 "vibeparser.tab.c"
+    break;
+
+  case 42: /* expression: expression DIVIDE expression  */
+#line 510 "vibeparser.y"
+                                   { 
+        if ((yyvsp[0].expr_result).value == 0) {
+            yyerror("Division by zero");
+            (yyval.expr_result).value = 0;
+            (yyval.expr_result).llvm_value = NULL;
+        } else {
+            (yyval.expr_result).value = (yyvsp[-2].expr_result).value / (yyvsp[0].expr_result).value;
+            if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+                (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, DIVIDE, (yyvsp[0].expr_result).llvm_value);
+            } else {
+                (yyval.expr_result).llvm_value = NULL;
+            }
+        }
+    }
+#line 1776 "vibeparser.tab.c"
+    break;
+
+  case 43: /* expression: expression MOD expression  */
+#line 524 "vibeparser.y"
+                                {
+        if ((yyvsp[0].expr_result).value == 0) {
+            yyerror("Modulo by zero");
+            (yyval.expr_result).value = 0;
+            (yyval.expr_result).llvm_value = NULL;
+        } else {
+            (yyval.expr_result).value = (yyvsp[-2].expr_result).value % (yyvsp[0].expr_result).value;
+            if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
+                (yyval.expr_result).llvm_value = gen_binary_op((yyvsp[-2].expr_result).llvm_value, MOD, (yyvsp[0].expr_result).llvm_value);
+            } else {
+                (yyval.expr_result).llvm_value = NULL;
+            }
+        }
+    }
+#line 1795 "vibeparser.tab.c"
+    break;
+
   case 44: /* expression: LPAREN expression RPAREN  */
-#line 324 "vibeparser.y"
-                               { (yyval.num) = (yyvsp[-1].num); }
-#line 1585 "vibeparser.tab.c"
+#line 538 "vibeparser.y"
+                               { (yyval.expr_result) = (yyvsp[-1].expr_result); }
+#line 1801 "vibeparser.tab.c"
     break;
 
 
-#line 1589 "vibeparser.tab.c"
+#line 1805 "vibeparser.tab.c"
 
       default: break;
     }
@@ -1778,7 +1994,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 327 "vibeparser.y"
+#line 541 "vibeparser.y"
 
 
 void yyerror(const char *s) {
@@ -1800,6 +2016,9 @@ int main(int argc, char *argv[]) {
         }
     }
     
+    // Initialize LLVM before parsing
+    init_llvm();
+    
     yyparse();
     
     if (argc > 1) {
@@ -1807,6 +2026,6 @@ int main(int argc, char *argv[]) {
     }
    
     cleanup_symbols();
-     init_llvm_ir_generation();
+    cleanup_llvm();
     return 0;
 }

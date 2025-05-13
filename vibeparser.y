@@ -3,16 +3,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mood.h"
+#include <llvm-c/Core.h>
+#include <llvm-c/ExecutionEngine.h>
+#include <llvm-c/Target.h>
+#include <llvm-c/Analysis.h>
+#include <llvm-c/BitWriter.h>
 #include "vibeparser_llvm.h"
+
 Mood current_mood = NEUTRAL;
 extern int yylex();
-extern void init_llvm_ir_generation();
 extern FILE *yyin;
 void yyerror(const char *s);
 
 /* Flag for controlling conditional execution */
 int condition_result = 0;
-int skip_until_endif = 0;  // New flag to skip statements when condition is false
+int skip_until_endif = 0;
+
+
 
 /* Symbol table for storing variables */
 struct symbol {
@@ -20,11 +27,20 @@ struct symbol {
     int value;
     char *str_value;
     int is_string;
+    LLVMValueRef llvm_value;  // LLVM value reference
 };
 
 #define MAX_SYMBOLS 100
 struct symbol symbol_table[MAX_SYMBOLS];
 int sym_count = 0;
+
+/* LLVM global variables - declared extern to use from vibeparser_llvm.c */
+extern LLVMModuleRef module;
+extern LLVMBuilderRef builder;
+extern LLVMExecutionEngineRef engine;
+extern LLVMPassManagerRef pass_manager;
+extern LLVMValueRef current_function;
+extern LLVMBasicBlockRef current_block;
 
 /* Function to add or update a symbol in the table */
 int add_symbol(char *name, int value) {
@@ -32,6 +48,13 @@ int add_symbol(char *name, int value) {
         if (strcmp(symbol_table[i].name, name) == 0) {
             symbol_table[i].value = value;
             symbol_table[i].is_string = 0;
+            
+            // Generate LLVM IR for variable assignment
+            if (!skip_until_endif) {
+                LLVMValueRef const_val = LLVMConstInt(LLVMInt32Type(), value, 0);
+                gen_variable_decl(name, const_val, 0);
+                symbol_table[i].llvm_value = get_symbol_value_llvm(name);
+            }
             return i;
         }
     }
@@ -44,6 +67,14 @@ int add_symbol(char *name, int value) {
     symbol_table[sym_count].name = strdup(name);
     symbol_table[sym_count].value = value;
     symbol_table[sym_count].is_string = 0;
+    
+    // Generate LLVM IR for new variable
+    if (!skip_until_endif) {
+        LLVMValueRef const_val = LLVMConstInt(LLVMInt32Type(), value, 0);
+        gen_variable_decl(name, const_val, 0);
+        symbol_table[sym_count].llvm_value = get_symbol_value_llvm(name);
+    }
+    
     return sym_count++;
 }
 
@@ -56,6 +87,13 @@ int add_string_symbol(char *name, char *value) {
             }
             symbol_table[i].str_value = strdup(value);
             symbol_table[i].is_string = 1;
+            
+            // Generate LLVM IR for string variable
+            if (!skip_until_endif) {
+                LLVMValueRef str_val = LLVMBuildGlobalStringPtr(builder, value, "str_lit");
+                gen_variable_decl(name, str_val, 1);
+                symbol_table[i].llvm_value = get_symbol_value_llvm(name);
+            }
             return i;
         }
     }
@@ -68,6 +106,14 @@ int add_string_symbol(char *name, char *value) {
     symbol_table[sym_count].name = strdup(name);
     symbol_table[sym_count].str_value = strdup(value);
     symbol_table[sym_count].is_string = 1;
+    
+    // Generate LLVM IR for new string variable
+    if (!skip_until_endif) {
+        LLVMValueRef str_val = LLVMBuildGlobalStringPtr(builder, value, "str_lit");
+        gen_variable_decl(name, str_val, 1);
+        symbol_table[sym_count].llvm_value = get_symbol_value_llvm(name);
+    }
+    
     return sym_count++;
 }
 
@@ -126,11 +172,17 @@ void cleanup_symbols() {
     }
     sym_count = 0;
 }
+
+/* Remove the ExprResult definition since it's already in the header */
 %}
+%code requires {
+    #include "vibeparser_llvm.h"
+}
 
 %union {
     int num;
     char *str;
+    ExprResult expr_result;
 }
 
 %token MOOD_SARCASTIC MOOD_ROMANTIC
@@ -150,7 +202,7 @@ void cleanup_symbols() {
 %right NOT
 
 /* Declare types for all non-terminals that return values */
-%type <num> expression condition
+%type <expr_result> expression condition
 %type <str> romantic_decl sarcastic_decl
 %type <str> identifier_term print_value
 %type <num> if_statement
@@ -159,7 +211,11 @@ void cleanup_symbols() {
 %%
 
 program:
-    mood_declaration statements
+    mood_declaration statements {
+        if (!skip_until_endif) {
+            finalize_llvm("output.ll");
+        }
+    }
     ;
 
 mood_declaration:
@@ -178,7 +234,7 @@ statement:
     variable_decl SEMICOLON
     | expression SEMICOLON { 
         if (current_mood != SARCASTIC && current_mood != ROMANTIC && !skip_until_endif) {
-            printf("Expression result: %d\n", $1); 
+            printf("Expression result: %d\n", $1.value); 
         }
     }
     | print_statement SEMICOLON
@@ -188,8 +244,19 @@ statement:
 variable_decl:
     romantic_decl { if (!skip_until_endif) { printf("ROMANTIC DECL: %s\n", $1); free($1); } }
     | sarcastic_decl { if (!skip_until_endif) { printf("SARCASTIC DECL: %s\n", $1); free($1); } }
-    | IDENTIFIER ASSIGN expression { if (!skip_until_endif) { add_symbol($1, $3); free($1); } }
-    | IDENTIFIER ASSIGN STRING_LITERAL { if (!skip_until_endif) { add_string_symbol($1, $3); free($1); free($3); } }
+    | IDENTIFIER ASSIGN expression { 
+        if (!skip_until_endif) { 
+            add_symbol($1, $3.value); 
+            free($1); 
+        } 
+    }
+    | IDENTIFIER ASSIGN STRING_LITERAL { 
+        if (!skip_until_endif) { 
+            add_string_symbol($1, $3); 
+            free($1); 
+            free($3); 
+        } 
+    }
     ;
 
 romantic_decl:
@@ -225,6 +292,43 @@ print_statement:
                 printf("Output: %s", $2);
             }
             printf("\n");
+            
+            // Generate LLVM IR for print statement
+            LLVMValueRef print_val = NULL;
+            int is_string = 0;
+            
+            // Check if it's a string literal or variable
+            for (int i = 0; i < sym_count; i++) {
+                if (symbol_table[i].name && strcmp(symbol_table[i].name, $2) == 0) {
+                    is_string = symbol_table[i].is_string;
+                    if (is_string) {
+                        print_val = LLVMBuildLoad2(builder, LLVMPointerType(LLVMInt8Type(), 0), 
+                                                   symbol_table[i].llvm_value, "strload");
+                    } else {
+                        print_val = LLVMBuildLoad2(builder, LLVMInt32Type(), 
+                                                   symbol_table[i].llvm_value, "intload");
+                    }
+                    break;
+                }
+            }
+            
+            // If it's not a variable, it might be a literal
+            if (print_val == NULL) {
+                // Try to parse as integer
+                char *endptr;
+                long val = strtol($2, &endptr, 10);
+                if (*endptr == '\0') {
+                    // It's an integer literal
+                    print_val = LLVMConstInt(LLVMInt32Type(), val, 0);
+                    is_string = 0;
+                } else {
+                    // It's a string literal
+                    print_val = LLVMBuildGlobalStringPtr(builder, $2, "str_print");
+                    is_string = 1;
+                }
+            }
+            
+            gen_print(print_val, is_string);
         }
         free($2);
     }
@@ -233,7 +337,7 @@ print_statement:
 print_value:
     expression {
         char buffer[32];
-        sprintf(buffer, "%d", $1);
+        sprintf(buffer, "%d", $1.value);
         $$ = strdup(buffer);
     }
     | STRING_LITERAL { $$ = $1; }
@@ -249,29 +353,51 @@ print_value:
     }
     ;
 
+
 if_statement:
     IF condition THEN {
-        condition_result = $2;
+        condition_result = $2.value;
         if (!condition_result) {
-            skip_until_endif = 1;  // Skip until we find ELSE or ENDIF
+            skip_until_endif = 1;
+        }
+        
+        // Generate LLVM IR for if statement
+        if (!skip_until_endif && $2.llvm_value) {
+            start_if_statement($2.llvm_value);
         }
     } if_block {
-        skip_until_endif = 0;  // Reset skipping flag
+        skip_until_endif = 0;
         $$ = $5;
     }
     ;
 
 if_block:
-    if_true_block ENDIF { $$ = condition_result; }
+    if_true_block ENDIF { 
+        $$ = condition_result; 
+        // End if statement in LLVM IR
+        if (!skip_until_endif) {
+            end_if_statement();
+        }
+    }
     | if_true_block ELSE {
         if (condition_result) {
-            skip_until_endif = 1;  // Skip else block if condition was true
+            skip_until_endif = 1;
         } else {
-            skip_until_endif = 0;  // Execute else block if condition was false
+            skip_until_endif = 0;
+        }
+        
+        // Generate LLVM IR for else part
+        if (!skip_until_endif) {
+            handle_else();
         }
     } if_false_block ENDIF {
-        skip_until_endif = 0;  // Reset skipping flag
+        skip_until_endif = 0;
         $$ = condition_result;
+        
+        // End if statement in LLVM IR
+        if (!skip_until_endif) {
+            end_if_statement();
+        }
     }
     ;
 
@@ -281,15 +407,53 @@ if_true_block:
 
 if_false_block:
     statements { $$ = condition_result; }
-    ;
 
 condition:
-    expression EQ expression { $$ = ($1 == $3); }
-    | expression GT expression { $$ = ($1 > $3); }
-    | expression LT expression { $$ = ($1 < $3); }
-    | NOT condition { $$ = !$2; }
+    expression EQ expression { 
+        int result = ($1.value == $3.value);
+        $$.value = result;
+        if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+            $$.llvm_value = gen_binary_op($1.llvm_value, EQ, $3.llvm_value);
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
+    | expression GT expression { 
+        int result = ($1.value > $3.value);
+        $$.value = result;
+        if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+            $$.llvm_value = gen_binary_op($1.llvm_value, GT, $3.llvm_value);
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
+    | expression LT expression { 
+        int result = ($1.value < $3.value);
+        $$.value = result;
+        if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+            $$.llvm_value = gen_binary_op($1.llvm_value, LT, $3.llvm_value);
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
+    | NOT condition { 
+        $$.value = !$2.value;
+        if (!skip_until_endif && $2.llvm_value) {
+            $$.llvm_value = LLVMBuildNot(builder, $2.llvm_value, "nottmp");
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
     | LPAREN condition RPAREN { $$ = $2; }
-    | expression { $$ = $1 != 0; } /* Non-zero is true */
+    | expression { 
+        $$.value = $1.value != 0;
+        if (!skip_until_endif && $1.llvm_value) {
+            LLVMValueRef zero = LLVMConstInt(LLVMInt32Type(), 0, 0);
+            $$.llvm_value = LLVMBuildICmp(builder, LLVMIntNE, $1.llvm_value, zero, "condtmp");
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
     ;
 
 identifier_term:
@@ -297,28 +461,78 @@ identifier_term:
     ;
 
 expression:
-    INTEGER { $$ = $1; }
+    INTEGER { 
+        $$.value = $1;
+        if (!skip_until_endif) {
+            $$.llvm_value = gen_expression($1);
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
     | identifier_term { 
-        $$ = get_symbol_value($1);
+        $$.value = get_symbol_value($1);
+        if (!skip_until_endif) {
+            LLVMValueRef sym_val = get_symbol_value_llvm($1);
+            if (sym_val) {
+                $$.llvm_value = LLVMBuildLoad2(builder, LLVMInt32Type(), sym_val, "varload");
+            } else {
+                $$.llvm_value = NULL;
+            }
+        } else {
+            $$.llvm_value = NULL;
+        }
         free($1);
     }
-    | expression PLUS expression { $$ = $1 + $3; }
-    | expression MINUS expression { $$ = $1 - $3; }
-    | expression TIMES expression { $$ = $1 * $3; }
-    | expression DIVIDE expression { 
-        if ($3 == 0) {
-            yyerror("Division by zero");
-            $$ = 0;
+    | expression PLUS expression { 
+        $$.value = $1.value + $3.value;
+        if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+            $$.llvm_value = gen_binary_op($1.llvm_value, PLUS, $3.llvm_value);
         } else {
-            $$ = $1 / $3; 
+            $$.llvm_value = NULL;
+        }
+    }
+    | expression MINUS expression { 
+        $$.value = $1.value - $3.value;
+        if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+            $$.llvm_value = gen_binary_op($1.llvm_value, MINUS, $3.llvm_value);
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
+    | expression TIMES expression { 
+        $$.value = $1.value * $3.value;
+        if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+            $$.llvm_value = gen_binary_op($1.llvm_value, TIMES, $3.llvm_value);
+        } else {
+            $$.llvm_value = NULL;
+        }
+    }
+    | expression DIVIDE expression { 
+        if ($3.value == 0) {
+            yyerror("Division by zero");
+            $$.value = 0;
+            $$.llvm_value = NULL;
+        } else {
+            $$.value = $1.value / $3.value;
+            if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+                $$.llvm_value = gen_binary_op($1.llvm_value, DIVIDE, $3.llvm_value);
+            } else {
+                $$.llvm_value = NULL;
+            }
         }
     }
     | expression MOD expression {
-        if ($3 == 0) {
+        if ($3.value == 0) {
             yyerror("Modulo by zero");
-            $$ = 0;
+            $$.value = 0;
+            $$.llvm_value = NULL;
         } else {
-            $$ = $1 % $3;
+            $$.value = $1.value % $3.value;
+            if (!skip_until_endif && $1.llvm_value && $3.llvm_value) {
+                $$.llvm_value = gen_binary_op($1.llvm_value, MOD, $3.llvm_value);
+            } else {
+                $$.llvm_value = NULL;
+            }
         }
     }
     | LPAREN expression RPAREN { $$ = $2; }
@@ -345,6 +559,9 @@ int main(int argc, char *argv[]) {
         }
     }
     
+    // Initialize LLVM before parsing
+    init_llvm();
+    
     yyparse();
     
     if (argc > 1) {
@@ -352,6 +569,6 @@ int main(int argc, char *argv[]) {
     }
    
     cleanup_symbols();
-     init_llvm_ir_generation();
+    cleanup_llvm();
     return 0;
 }

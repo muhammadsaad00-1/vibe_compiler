@@ -9,7 +9,19 @@ typedef struct {
     int value;
     LLVMValueRef llvm_value;
 } ExprResult;
+typedef struct {
+    char *var_name;
+    LLVMValueRef iterator;
+    LLVMValueRef end_value;
+    LLVMBasicBlockRef loop_block;
+    LLVMBasicBlockRef body_block;
+    LLVMBasicBlockRef incr_block;
+    LLVMBasicBlockRef exit_block;
+} ForContext;
 
+#define MAX_FOR_DEPTH 10
+extern ForContext for_stack[MAX_FOR_DEPTH];
+extern int for_stack_top;
 // LLVM global variables
 extern LLVMModuleRef module;
 extern LLVMBuilderRef builder;
@@ -40,5 +52,7 @@ LLVMBasicBlockRef get_merge_block();
 void start_if_statement(LLVMValueRef condition);
 void handle_else();
 void end_if_statement();
-
+void start_for_loop(char *var_name, LLVMValueRef init_val, LLVMValueRef end_val);
+void end_for_loop(char *var_name);
+LLVMValueRef get_for_iterator_value(char *var_name);
 #endif // VIBEPARSER_LLVM_H

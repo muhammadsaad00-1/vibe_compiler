@@ -23,6 +23,7 @@ source_filename = "vibeparser_module"
 @fmt.17 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @str_print.18 = private unnamed_addr constant [47 x i8] c"This shouldn't print - y is NOT greater than x\00", align 1
 @fmt.19 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
+@fmt.20 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 define i32 @main() {
 entry:
@@ -89,6 +90,19 @@ if_false:                                         ; preds = %entry
   br label %if_merge
 
 if_merge:                                         ; preds = %if_false, %if_true
+  %i = alloca i32, align 4
+  store i32 1, ptr %i, align 4
+  %i21 = alloca i32, align 4
+  store i32 1, ptr %i21, align 4
+  %i22 = alloca i32, align 4
+  store i32 2, ptr %i22, align 4
+  %i23 = alloca i32, align 4
+  store i32 3, ptr %i23, align 4
+  %i24 = alloca i32, align 4
+  store i32 4, ptr %i24, align 4
+  %i25 = alloca i32, align 4
+  store i32 5, ptr %i25, align 4
+  %13 = call i32 (ptr, ...) @printf(ptr @fmt.20, i32 5)
   ret i32 0
 }
 

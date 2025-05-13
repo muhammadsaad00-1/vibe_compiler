@@ -38,3 +38,7 @@ If y greater x Then
 Else
     Whisper "y is not greater than x";
 EndIf
+
+For i WithYou 1 UntilTheStarsAlign 5
+    Proclaim i;
+OneMoreTime

@@ -13,13 +13,13 @@
 Mood current_mood = NEUTRAL;
 extern int yylex();
 extern FILE *yyin;
+extern ForContext* get_current_for_context();
+extern void end_for_loop(char *var_name);
 void yyerror(const char *s);
 
 /* Flag for controlling conditional execution */
 int condition_result = 0;
 int skip_until_endif = 0;
-
-
 
 /* Symbol table for storing variables */
 struct symbol {
@@ -173,7 +173,17 @@ void cleanup_symbols() {
     sym_count = 0;
 }
 
-/* Remove the ExprResult definition since it's already in the header */
+/* Loop implementation - we'll store the statements to execute */
+typedef struct {
+    char *loop_var;
+    int start_value;
+    int end_value;
+    int current_value;
+    /* We can't easily store statements in Bison, so we'll use a different approach */
+} LoopContext;
+
+static LoopContext current_loop;
+static int in_loop = 0;
 %}
 %code requires {
     #include "vibeparser_llvm.h"
@@ -194,6 +204,8 @@ void cleanup_symbols() {
 %token EQ GT LT NOT
 %token <num> INTEGER
 %token <str> IDENTIFIER STRING_LITERAL
+%token SARCASTIC_FOR SARCASTIC_WITH SARCASTIC_UNTIL SARCASTIC_NEXT
+%token ROMANTIC_FOR ROMANTIC_WITH ROMANTIC_UNTIL ROMANTIC_NEXT
 
 /* Define operator precedence to resolve conflicts */
 %left PLUS MINUS
@@ -207,7 +219,7 @@ void cleanup_symbols() {
 %type <str> identifier_term print_value
 %type <num> if_statement
 %type <num> if_block if_true_block if_false_block
-
+%type <num> for_statement
 %%
 
 program:
@@ -239,6 +251,7 @@ statement:
     }
     | print_statement SEMICOLON
     | if_statement
+    | for_statement
     ;
 
 variable_decl:
@@ -353,7 +366,6 @@ print_value:
     }
     ;
 
-
 if_statement:
     IF condition THEN {
         condition_result = $2.value;
@@ -407,6 +419,7 @@ if_true_block:
 
 if_false_block:
     statements { $$ = condition_result; }
+    ;
 
 condition:
     expression EQ expression { 
@@ -536,6 +549,84 @@ expression:
         }
     }
     | LPAREN expression RPAREN { $$ = $2; }
+    ;
+
+for_statement:
+    SARCASTIC_FOR IDENTIFIER SARCASTIC_WITH expression SARCASTIC_UNTIL expression {
+        if (!skip_until_endif) {
+            // Initialize loop
+            current_loop.loop_var = strdup($2);
+            current_loop.start_value = $4.value;
+            current_loop.end_value = $6.value;
+            current_loop.current_value = current_loop.start_value;
+            in_loop = 1;
+            
+            // Add loop variable to symbol table
+            add_symbol($2, current_loop.current_value);
+            
+            // Mood-specific output
+            if (current_mood == SARCASTIC) {
+                printf("Oh great, another loop from %d to %d. How thrilling.\n", 
+                       current_loop.start_value, current_loop.end_value);
+            }
+            
+            // Execute loop manually
+            for (int i = current_loop.start_value; i <= current_loop.end_value; i++) {
+                current_loop.current_value = i;
+                add_symbol(current_loop.loop_var, i);
+                
+                // Since we can't easily re-execute statements in Bison, 
+                // we'll handle this in a simplified way for now
+                printf("Loop iteration: %s = %d\n", current_loop.loop_var, i);
+            }
+            
+            free(current_loop.loop_var);
+            in_loop = 0;
+        }
+        free($2);
+    } statements SARCASTIC_NEXT {
+        if (!skip_until_endif && current_mood == SARCASTIC) {
+            printf("Wow, that loop is finally over. Shocking.\n");
+        }
+        $$ = 1;
+    }
+    | ROMANTIC_FOR IDENTIFIER ROMANTIC_WITH expression ROMANTIC_UNTIL expression {
+        if (!skip_until_endif) {
+            // Initialize loop
+            current_loop.loop_var = strdup($2);
+            current_loop.start_value = $4.value;
+            current_loop.end_value = $6.value;
+            current_loop.current_value = current_loop.start_value;
+            in_loop = 1;
+            
+            // Add loop variable to symbol table
+            add_symbol($2, current_loop.current_value);
+            
+            if (current_mood == ROMANTIC) {
+                printf("Let us dance together, %s, from %d until %d, like lovers under the moonlight.\n", 
+                       $2, current_loop.start_value, current_loop.end_value);
+            }
+            
+            // Execute loop manually
+            for (int i = current_loop.start_value; i <= current_loop.end_value; i++) {
+                current_loop.current_value = i;
+                add_symbol(current_loop.loop_var, i);
+                
+                // Since we can't easily re-execute statements in Bison, 
+                // we'll handle this in a simplified way for now
+                printf("Loop iteration: %s = %d\n", current_loop.loop_var, i);
+            }
+            
+            free(current_loop.loop_var);
+            in_loop = 0;
+        }
+        free($2);
+    } statements ROMANTIC_NEXT {
+        if (!skip_until_endif && current_mood == ROMANTIC) {
+            printf("Our dance comes to an end, like a gentle sunset.\n");
+        }
+        $$ = 1;
+    }
     ;
 
 %%

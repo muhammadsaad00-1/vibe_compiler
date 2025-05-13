@@ -1,4 +1,4 @@
-// First, let's fix the vibeparser_llvm.c file
+// Fixed vibeparser_llvm.c file with corrected for loop handling
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +33,8 @@ typedef struct {
 #define MAX_IF_DEPTH 10
 static IfContext if_stack[MAX_IF_DEPTH];
 static int if_stack_top = -1;
+ForContext for_stack[MAX_FOR_DEPTH];
+int for_stack_top = -1;
 
 // Push if context
 void push_if_context(LLVMBasicBlockRef true_block, LLVMBasicBlockRef false_block, LLVMBasicBlockRef merge_block) {
@@ -108,6 +110,14 @@ void cleanup_llvm() {
         }
     }
     llvm_sym_count = 0;
+    
+    // Clean up for loop stack
+    for (int i = 0; i <= for_stack_top; i++) {
+        if (for_stack[i].var_name) {
+            free(for_stack[i].var_name);
+        }
+    }
+    for_stack_top = -1;
 }
 
 // Add a symbol to the LLVM symbol table
@@ -301,11 +311,119 @@ void end_if_statement() {
     }
 }
 
-// ✅ Implement getter function
+// Getter function for merge block
 LLVMBasicBlockRef get_merge_block() {
     IfContext* context = get_current_if_context();
     if (context) {
         return context->merge_block;
+    }
+    return NULL;
+}
+
+// Push for context
+void push_for_context(char *var_name, LLVMValueRef iterator, LLVMValueRef end_value,
+    LLVMBasicBlockRef loop_block, LLVMBasicBlockRef incr_block, 
+    LLVMBasicBlockRef exit_block) {
+    if (for_stack_top < MAX_FOR_DEPTH - 1) {
+        for_stack_top++;
+        for_stack[for_stack_top].var_name = strdup(var_name);
+        for_stack[for_stack_top].iterator = iterator;
+        for_stack[for_stack_top].end_value = end_value;
+        for_stack[for_stack_top].loop_block = loop_block;
+        for_stack[for_stack_top].incr_block = incr_block;
+        for_stack[for_stack_top].exit_block = exit_block;
+    }
+}
+
+// Pop for context
+ForContext pop_for_context() {
+    ForContext context = {NULL, NULL, NULL, NULL, NULL, NULL};
+    if (for_stack_top >= 0) {
+        context = for_stack[for_stack_top];
+        for_stack_top--;
+    }
+    return context;
+}
+
+// Get current for context
+ForContext* get_current_for_context() {
+    if (for_stack_top >= 0) {
+        return &for_stack[for_stack_top];
+    }
+    return NULL;
+}
+// Complete corrected for loop implementation for vibeparser_llvm.c
+// Fixed version of start_for_loop and end_for_loop functions
+
+void start_for_loop(char *var_name, LLVMValueRef init_val, LLVMValueRef end_val) {
+    // Create all required blocks for the loop
+    LLVMBasicBlockRef loop_header = LLVMAppendBasicBlock(current_function, "for_header");
+    LLVMBasicBlockRef body_block = LLVMAppendBasicBlock(current_function, "for_body");
+    LLVMBasicBlockRef incr_block = LLVMAppendBasicBlock(current_function, "for_incr");
+    LLVMBasicBlockRef exit_block = LLVMAppendBasicBlock(current_function, "for_exit");
+
+    // Create the loop variable and initialize it
+    LLVMValueRef iterator = gen_variable_decl(var_name, init_val, 0);
+    
+    // Jump to the loop header
+    LLVMBuildBr(builder, loop_header);
+    
+    // Position builder at the loop header
+    LLVMPositionBuilderAtEnd(builder, loop_header);
+    
+    // Load the current value of the iterator
+    LLVMValueRef iter_val = LLVMBuildLoad2(builder, LLVMInt32Type(), iterator, "iter_val");
+    
+    // Compare with the end value and branch accordingly
+    LLVMValueRef cond = LLVMBuildICmp(builder, LLVMIntSLT, iter_val, end_val, "for_cond");
+    LLVMBuildCondBr(builder, cond, body_block, exit_block);
+    
+    // Move to the loop body
+    LLVMPositionBuilderAtEnd(builder, body_block);
+    
+    // Store the loop context for later use when ending the loop
+    push_for_context(var_name, iterator, end_val, loop_header, incr_block, exit_block);
+}
+
+void end_for_loop(char *var_name) {
+    ForContext* context = get_current_for_context();
+    if (!context) return;
+    
+    // Branch from the end of the loop body to the increment block
+    LLVMBuildBr(builder, context->incr_block);
+    
+    // Position builder at the increment block
+    LLVMPositionBuilderAtEnd(builder, context->incr_block);
+    
+    // Load the current iterator value
+    LLVMValueRef iter_val = LLVMBuildLoad2(builder, LLVMInt32Type(), context->iterator, "iter_val");
+    
+    // Increment the iterator
+    LLVMValueRef next_val = LLVMBuildAdd(builder, iter_val, LLVMConstInt(LLVMInt32Type(), 1, 0), "iter_inc");
+    
+    // Store the new value back
+    LLVMBuildStore(builder, next_val, context->iterator);
+    
+    // Jump back to the loop header for the next iteration check
+    LLVMBuildBr(builder, context->loop_block);
+    
+    // Position builder at the exit block for code after the loop
+    LLVMPositionBuilderAtEnd(builder, context->exit_block);
+    
+    // Clean up the context
+    pop_for_context();
+}
+
+// Get for iterator value
+LLVMValueRef get_for_iterator_value(char *var_name) {
+    ForContext* context = get_current_for_context();
+    if (context && context->var_name && strcmp(context->var_name, var_name) == 0) {
+        return LLVMBuildLoad2(builder, LLVMInt32Type(), context->iterator, "for_iter_load");
+    }
+    // Fallback to regular symbol lookup
+    LLVMValueRef val = get_symbol_value_llvm(var_name);
+    if (val) {
+        return LLVMBuildLoad2(builder, LLVMInt32Type(), val, "var_load");
     }
     return NULL;
 }

@@ -44,9 +44,10 @@ STRING   \"([^\"]|\\.)*\"
 "Else"                    { return ELSE; }
 "EndIf"                   { return ENDIF; }
 
-"equals"                  { return EQ; }  // Added this line
+"equals"                  { return EQ; }
 "greater"                 { return GT; }
 "less"                    { return LT; }
+"not"                     { return NOT; }
 
 "+"                       { return PLUS; }
 "-"                       { return MINUS; }
@@ -57,6 +58,16 @@ STRING   \"([^\"]|\\.)*\"
 ";"                       { return SEMICOLON; }
 "("                       { return LPAREN; }
 ")"                       { return RPAREN; }
+
+"CycleThrough"            { return SARCASTIC_FOR; }
+"WithThis"                { return SARCASTIC_WITH; }
+"UntilItsNot"             { return SARCASTIC_UNTIL; }
+"NextIteration"           { return SARCASTIC_NEXT; }
+
+"For"                     { return ROMANTIC_FOR; }
+"WithYou"                 { return ROMANTIC_WITH; }
+"UntilTheStarsAlign"      { return ROMANTIC_UNTIL; }  
+"OneMoreTime"             { return ROMANTIC_NEXT; }
 
 {DIGIT}+                  { yylval.num = atoi(yytext); return INTEGER; }
 {ID}                      { yylval.str = strdup(yytext); return IDENTIFIER; }

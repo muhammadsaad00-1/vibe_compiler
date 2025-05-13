@@ -83,13 +83,13 @@
 Mood current_mood = NEUTRAL;
 extern int yylex();
 extern FILE *yyin;
+extern ForContext* get_current_for_context();
+extern void end_for_loop(char *var_name);
 void yyerror(const char *s);
 
 /* Flag for controlling conditional execution */
 int condition_result = 0;
 int skip_until_endif = 0;
-
-
 
 /* Symbol table for storing variables */
 struct symbol {
@@ -243,9 +243,19 @@ void cleanup_symbols() {
     sym_count = 0;
 }
 
-/* Remove the ExprResult definition since it's already in the header */
+/* Loop implementation - we'll store the statements to execute */
+typedef struct {
+    char *loop_var;
+    int start_value;
+    int end_value;
+    int current_value;
+    /* We can't easily store statements in Bison, so we'll use a different approach */
+} LoopContext;
 
-#line 249 "vibeparser.tab.c"
+static LoopContext current_loop;
+static int in_loop = 0;
+
+#line 259 "vibeparser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -309,25 +319,36 @@ enum yysymbol_kind_t
   YYSYMBOL_INTEGER = 33,                   /* INTEGER  */
   YYSYMBOL_IDENTIFIER = 34,                /* IDENTIFIER  */
   YYSYMBOL_STRING_LITERAL = 35,            /* STRING_LITERAL  */
-  YYSYMBOL_YYACCEPT = 36,                  /* $accept  */
-  YYSYMBOL_program = 37,                   /* program  */
-  YYSYMBOL_mood_declaration = 38,          /* mood_declaration  */
-  YYSYMBOL_statements = 39,                /* statements  */
-  YYSYMBOL_statement = 40,                 /* statement  */
-  YYSYMBOL_variable_decl = 41,             /* variable_decl  */
-  YYSYMBOL_romantic_decl = 42,             /* romantic_decl  */
-  YYSYMBOL_sarcastic_decl = 43,            /* sarcastic_decl  */
-  YYSYMBOL_print_statement = 44,           /* print_statement  */
-  YYSYMBOL_print_value = 45,               /* print_value  */
-  YYSYMBOL_if_statement = 46,              /* if_statement  */
-  YYSYMBOL_47_1 = 47,                      /* $@1  */
-  YYSYMBOL_if_block = 48,                  /* if_block  */
-  YYSYMBOL_49_2 = 49,                      /* $@2  */
-  YYSYMBOL_if_true_block = 50,             /* if_true_block  */
-  YYSYMBOL_if_false_block = 51,            /* if_false_block  */
-  YYSYMBOL_condition = 52,                 /* condition  */
-  YYSYMBOL_identifier_term = 53,           /* identifier_term  */
-  YYSYMBOL_expression = 54                 /* expression  */
+  YYSYMBOL_SARCASTIC_FOR = 36,             /* SARCASTIC_FOR  */
+  YYSYMBOL_SARCASTIC_WITH = 37,            /* SARCASTIC_WITH  */
+  YYSYMBOL_SARCASTIC_UNTIL = 38,           /* SARCASTIC_UNTIL  */
+  YYSYMBOL_SARCASTIC_NEXT = 39,            /* SARCASTIC_NEXT  */
+  YYSYMBOL_ROMANTIC_FOR = 40,              /* ROMANTIC_FOR  */
+  YYSYMBOL_ROMANTIC_WITH = 41,             /* ROMANTIC_WITH  */
+  YYSYMBOL_ROMANTIC_UNTIL = 42,            /* ROMANTIC_UNTIL  */
+  YYSYMBOL_ROMANTIC_NEXT = 43,             /* ROMANTIC_NEXT  */
+  YYSYMBOL_YYACCEPT = 44,                  /* $accept  */
+  YYSYMBOL_program = 45,                   /* program  */
+  YYSYMBOL_mood_declaration = 46,          /* mood_declaration  */
+  YYSYMBOL_statements = 47,                /* statements  */
+  YYSYMBOL_statement = 48,                 /* statement  */
+  YYSYMBOL_variable_decl = 49,             /* variable_decl  */
+  YYSYMBOL_romantic_decl = 50,             /* romantic_decl  */
+  YYSYMBOL_sarcastic_decl = 51,            /* sarcastic_decl  */
+  YYSYMBOL_print_statement = 52,           /* print_statement  */
+  YYSYMBOL_print_value = 53,               /* print_value  */
+  YYSYMBOL_if_statement = 54,              /* if_statement  */
+  YYSYMBOL_55_1 = 55,                      /* $@1  */
+  YYSYMBOL_if_block = 56,                  /* if_block  */
+  YYSYMBOL_57_2 = 57,                      /* $@2  */
+  YYSYMBOL_if_true_block = 58,             /* if_true_block  */
+  YYSYMBOL_if_false_block = 59,            /* if_false_block  */
+  YYSYMBOL_condition = 60,                 /* condition  */
+  YYSYMBOL_identifier_term = 61,           /* identifier_term  */
+  YYSYMBOL_expression = 62,                /* expression  */
+  YYSYMBOL_for_statement = 63,             /* for_statement  */
+  YYSYMBOL_64_3 = 64,                      /* $@3  */
+  YYSYMBOL_65_4 = 65                       /* $@4  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -655,19 +676,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  5
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   107
+#define YYLAST   152
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  36
+#define YYNTOKENS  44
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  19
+#define YYNNTS  22
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  44
+#define YYNRULES  49
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  84
+#define YYNSTATES  103
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   290
+#define YYMAXUTOK   298
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -710,18 +731,18 @@ static const yytype_int8 yytranslate[] =
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35
+      35,    36,    37,    38,    39,    40,    41,    42,    43
 };
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   214,   214,   222,   223,   224,   228,   229,   230,   234,
-     235,   240,   241,   245,   246,   247,   253,   263,   274,   285,
-     338,   343,   344,   358,   358,   375,   382,   382,   405,   409,
-     412,   421,   430,   439,   447,   448,   460,   464,   472,   486,
-     494,   502,   510,   524,   538
+       0,   226,   226,   234,   235,   236,   240,   241,   242,   246,
+     247,   252,   253,   254,   258,   259,   260,   266,   276,   287,
+     298,   351,   356,   357,   370,   370,   387,   394,   394,   417,
+     421,   425,   434,   443,   452,   460,   461,   473,   477,   485,
+     499,   507,   515,   523,   537,   551,   555,   555,   593,   593
 };
 #endif
 
@@ -742,11 +763,14 @@ static const char *const yytname[] =
   "SARCASTIC_WOW", "SARCASTIC_NOW", "SARCASTIC_REV", "PLUS", "MINUS",
   "TIMES", "DIVIDE", "MOD", "ASSIGN", "SEMICOLON", "LPAREN", "RPAREN",
   "PRINT", "IF", "THEN", "ELSE", "ENDIF", "EQ", "GT", "LT", "NOT",
-  "INTEGER", "IDENTIFIER", "STRING_LITERAL", "$accept", "program",
+  "INTEGER", "IDENTIFIER", "STRING_LITERAL", "SARCASTIC_FOR",
+  "SARCASTIC_WITH", "SARCASTIC_UNTIL", "SARCASTIC_NEXT", "ROMANTIC_FOR",
+  "ROMANTIC_WITH", "ROMANTIC_UNTIL", "ROMANTIC_NEXT", "$accept", "program",
   "mood_declaration", "statements", "statement", "variable_decl",
   "romantic_decl", "sarcastic_decl", "print_statement", "print_value",
   "if_statement", "$@1", "if_block", "$@2", "if_true_block",
-  "if_false_block", "condition", "identifier_term", "expression", YY_NULLPTR
+  "if_false_block", "condition", "identifier_term", "expression",
+  "for_statement", "$@3", "$@4", YY_NULLPTR
 };
 
 static const char *
@@ -756,29 +780,31 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-54)
+#define YYPACT_NINF (-51)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
 
-#define YYTABLE_NINF (-23)
+#define YYTABLE_NINF (-24)
 
 #define yytable_value_is_error(Yyn) \
   0
 
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
    STATE-NUM.  */
-static const yytype_int8 yypact[] =
+static const yytype_int16 yypact[] =
 {
-      48,   -54,   -54,    13,     4,   -54,    -4,    -4,   -12,    14,
-      36,   -54,    58,     4,   -54,    35,   -54,   -54,    64,   -54,
-     -54,    65,   -54,    86,    82,    56,   -54,   -54,    73,    72,
-      36,    36,    69,    24,    28,   -54,   -54,   -54,   -12,   -12,
-     -12,   -12,   -12,   -54,    89,    84,   -54,    75,   -11,   -54,
-     -54,   -12,   -12,   -12,   -54,    72,    47,    47,   -54,   -54,
-     -54,    91,    67,   -54,     4,    72,    72,    72,    94,    88,
-       4,   -54,    32,    95,   -54,   -54,   -54,    93,     4,    74,
-       4,    77,   -54,   -54
+      11,   -51,   -51,    29,    85,   -51,    -9,    -9,     0,    36,
+     102,   -51,     3,    10,    12,    85,   -51,    44,   -51,   -51,
+      47,   -51,   -51,   131,   -51,   -51,    71,    67,     1,   -51,
+     -51,    58,   122,   102,   102,    73,   114,    59,    48,    63,
+     -51,   -51,   -51,     0,     0,     0,     0,     0,   -51,    93,
+      90,   -51,    83,    97,   -51,   -51,     0,     0,     0,   -51,
+     122,     0,     0,    43,    43,   -51,   -51,   -51,   100,    72,
+     -51,    85,   122,   122,   122,    -6,   -11,   104,   103,    85,
+     -51,    25,     0,     0,   113,   -51,   -51,   -51,   122,   122,
+     132,    85,    85,    85,   118,    85,    95,    62,    23,   -51,
+     -51,   -51,   -51
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -787,28 +813,32 @@ static const yytype_int8 yypact[] =
 static const yytype_int8 yydefact[] =
 {
        5,     3,     4,     0,     8,     1,     0,     0,     0,     0,
-       0,    37,    36,     2,     7,     0,    13,    14,     0,    12,
-      38,     0,    36,     0,     0,     0,    21,    19,    38,    20,
-       0,     0,     0,    35,     0,     6,     9,    11,     0,     0,
-       0,     0,     0,    10,     0,     0,    44,     0,     0,    33,
-      23,     0,     0,     0,    16,    15,    39,    40,    41,    42,
-      43,     0,     0,    34,     8,    30,    31,    32,     0,     0,
-      28,    24,     0,     0,    18,    26,    25,     0,     8,     0,
-      29,     0,    17,    27
+       0,    38,    37,     0,     0,     2,     7,     0,    14,    15,
+       0,    12,    39,     0,    13,    37,     0,     0,     0,    22,
+      20,    39,    21,     0,     0,     0,    36,     0,     0,     0,
+       6,     9,    11,     0,     0,     0,     0,     0,    10,     0,
+       0,    45,     0,     0,    34,    24,     0,     0,     0,    17,
+      16,     0,     0,    40,    41,    42,    43,    44,     0,     0,
+      35,     8,    31,    32,    33,     0,     0,     0,     0,    29,
+      25,     0,     0,     0,     0,    19,    27,    26,    46,    48,
+       0,     8,     8,     8,     0,    30,     0,     0,     0,    18,
+      28,    47,    49
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -54,   -54,   -54,   -53,   -13,   -54,   -54,   -54,   -54,   -54,
-     -54,   -54,   -54,   -54,   -54,   -54,    46,     8,    -7
+     -51,   -51,   -51,   -50,   -15,   -51,   -51,   -51,   -51,   -51,
+     -51,   -51,   -51,   -51,   -51,   -51,    39,    82,    -7,   -51,
+     -51,   -51
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     3,     4,    13,    14,    15,    16,    17,    18,    27,
-      19,    64,    71,    78,    72,    81,    32,    20,    21
+       0,     3,     4,    15,    16,    17,    18,    19,    20,    30,
+      21,    71,    80,    91,    81,    96,    35,    22,    23,    24,
+      92,    93
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -816,67 +846,79 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      35,    25,    29,    33,    38,    39,    40,    41,    42,     6,
-       8,    70,    46,     5,    23,    24,     7,    28,    51,    52,
-      53,    11,    22,    48,    33,    80,     8,    55,     9,    10,
-      22,    56,    57,    58,    59,    60,     8,    11,    12,    38,
-      39,    40,    41,    42,    65,    66,    67,    11,    22,    26,
-       8,     1,     2,    51,    52,    53,    36,    35,    30,    75,
-      76,    11,    22,    54,    40,    41,    42,    35,    31,    11,
-      22,    38,    39,    40,    41,    42,    47,    49,    34,    46,
-      38,    39,    40,    41,    42,    37,    43,    38,    39,    40,
-      41,    42,    44,    45,   -22,    50,    61,    62,    63,    68,
-      69,    73,    74,    79,    77,    83,     0,    82
+      40,    28,    32,    36,    43,    44,    45,    46,    47,    43,
+      44,    45,    46,    47,     1,     2,    43,    44,    45,    46,
+      47,    79,     8,    37,    51,    25,    53,    36,     6,     5,
+      60,    83,    82,    11,    25,     7,    63,    64,    65,    66,
+      67,    95,    97,    98,    38,     8,    39,     9,    10,    72,
+      73,    74,    86,    87,    75,    76,    11,    12,     8,    13,
+      45,    46,    47,    14,    40,    41,   102,     6,    42,    11,
+      25,    29,    52,    54,     7,    88,    89,    49,    50,   -23,
+      40,     8,    40,    40,     8,    61,     9,    10,    26,    27,
+       6,    31,    11,    25,    59,    11,    12,     7,    13,    55,
+      68,   101,    14,    69,    62,    78,    70,     8,    77,     9,
+      10,    84,    43,    44,    45,    46,    47,    85,    11,    12,
+      51,    13,    90,   100,    33,    14,    56,    57,    58,    43,
+      44,    45,    46,    47,    34,    11,    25,    43,    44,    45,
+      46,    47,    94,    56,    57,    58,    43,    44,    45,    46,
+      47,    99,    48
 };
 
 static const yytype_int8 yycheck[] =
 {
-      13,     8,     9,    10,    15,    16,    17,    18,    19,     5,
-      22,    64,    23,     0,     6,     7,    12,     9,    29,    30,
-      31,    33,    34,    30,    31,    78,    22,    34,    24,    25,
-      34,    38,    39,    40,    41,    42,    22,    33,    34,    15,
-      16,    17,    18,    19,    51,    52,    53,    33,    34,    35,
-      22,     3,     4,    29,    30,    31,    21,    70,    22,    27,
-      28,    33,    34,    35,    17,    18,    19,    80,    32,    33,
-      34,    15,    16,    17,    18,    19,    30,    31,    20,    23,
-      15,    16,    17,    18,    19,    21,    21,    15,    16,    17,
-      18,    19,     6,    11,    21,    26,     7,    13,    23,     8,
-      33,     7,    14,    10,     9,    28,    -1,    33
+      15,     8,     9,    10,    15,    16,    17,    18,    19,    15,
+      16,    17,    18,    19,     3,     4,    15,    16,    17,    18,
+      19,    71,    22,    20,    23,    34,    33,    34,     5,     0,
+      37,    42,    38,    33,    34,    12,    43,    44,    45,    46,
+      47,    91,    92,    93,    34,    22,    34,    24,    25,    56,
+      57,    58,    27,    28,    61,    62,    33,    34,    22,    36,
+      17,    18,    19,    40,    79,    21,    43,     5,    21,    33,
+      34,    35,    33,    34,    12,    82,    83,     6,    11,    21,
+      95,    22,    97,    98,    22,    37,    24,    25,     6,     7,
+       5,     9,    33,    34,    35,    33,    34,    12,    36,    26,
+       7,    39,    40,    13,    41,    33,    23,    22,     8,    24,
+      25,     7,    15,    16,    17,    18,    19,    14,    33,    34,
+      23,    36,     9,    28,    22,    40,    29,    30,    31,    15,
+      16,    17,    18,    19,    32,    33,    34,    15,    16,    17,
+      18,    19,    10,    29,    30,    31,    15,    16,    17,    18,
+      19,    33,    21
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,     4,    37,    38,     0,     5,    12,    22,    24,
-      25,    33,    34,    39,    40,    41,    42,    43,    44,    46,
-      53,    54,    34,    53,    53,    54,    35,    45,    53,    54,
-      22,    32,    52,    54,    20,    40,    21,    21,    15,    16,
-      17,    18,    19,    21,     6,    11,    23,    52,    54,    52,
-      26,    29,    30,    31,    35,    54,    54,    54,    54,    54,
-      54,     7,    13,    23,    47,    54,    54,    54,     8,    33,
-      39,    48,    50,     7,    14,    27,    28,     9,    49,    10,
-      39,    51,    33,    28
+       0,     3,     4,    45,    46,     0,     5,    12,    22,    24,
+      25,    33,    34,    36,    40,    47,    48,    49,    50,    51,
+      52,    54,    61,    62,    63,    34,    61,    61,    62,    35,
+      53,    61,    62,    22,    32,    60,    62,    20,    34,    34,
+      48,    21,    21,    15,    16,    17,    18,    19,    21,     6,
+      11,    23,    60,    62,    60,    26,    29,    30,    31,    35,
+      62,    37,    41,    62,    62,    62,    62,    62,     7,    13,
+      23,    55,    62,    62,    62,    62,    62,     8,    33,    47,
+      56,    58,    38,    42,     7,    14,    27,    28,    62,    62,
+       9,    57,    64,    65,    10,    47,    59,    47,    47,    33,
+      28,    39,    43
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    36,    37,    38,    38,    38,    39,    39,    39,    40,
-      40,    40,    40,    41,    41,    41,    41,    42,    43,    44,
-      45,    45,    45,    47,    46,    48,    49,    48,    50,    51,
-      52,    52,    52,    52,    52,    52,    53,    54,    54,    54,
-      54,    54,    54,    54,    54
+       0,    44,    45,    46,    46,    46,    47,    47,    47,    48,
+      48,    48,    48,    48,    49,    49,    49,    49,    50,    51,
+      52,    53,    53,    53,    55,    54,    56,    57,    56,    58,
+      59,    60,    60,    60,    60,    60,    60,    61,    62,    62,
+      62,    62,    62,    62,    62,    62,    64,    63,    65,    63
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
        0,     2,     2,     1,     1,     0,     2,     1,     0,     2,
-       2,     2,     1,     1,     1,     3,     3,     9,     6,     2,
-       1,     1,     1,     0,     5,     2,     0,     5,     1,     1,
-       3,     3,     3,     2,     3,     1,     1,     1,     1,     3,
-       3,     3,     3,     3,     3
+       2,     2,     1,     1,     1,     1,     3,     3,     9,     6,
+       2,     1,     1,     1,     0,     5,     2,     0,     5,     1,
+       1,     3,     3,     3,     2,     3,     1,     1,     1,     1,
+       3,     3,     3,     3,     3,     3,     0,     9,     0,     9
 };
 
 
@@ -1340,68 +1382,68 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: mood_declaration statements  */
-#line 214 "vibeparser.y"
+#line 226 "vibeparser.y"
                                 {
         if (!skip_until_endif) {
             finalize_llvm("output.ll");
         }
     }
-#line 1350 "vibeparser.tab.c"
+#line 1392 "vibeparser.tab.c"
     break;
 
   case 3: /* mood_declaration: MOOD_SARCASTIC  */
-#line 222 "vibeparser.y"
+#line 234 "vibeparser.y"
                    { current_mood = SARCASTIC; }
-#line 1356 "vibeparser.tab.c"
+#line 1398 "vibeparser.tab.c"
     break;
 
   case 4: /* mood_declaration: MOOD_ROMANTIC  */
-#line 223 "vibeparser.y"
+#line 235 "vibeparser.y"
                     { current_mood = ROMANTIC; }
-#line 1362 "vibeparser.tab.c"
+#line 1404 "vibeparser.tab.c"
     break;
 
   case 5: /* mood_declaration: %empty  */
-#line 224 "vibeparser.y"
+#line 236 "vibeparser.y"
                   { current_mood = NEUTRAL; }
-#line 1368 "vibeparser.tab.c"
+#line 1410 "vibeparser.tab.c"
     break;
 
   case 10: /* statement: expression SEMICOLON  */
-#line 235 "vibeparser.y"
+#line 247 "vibeparser.y"
                            { 
         if (current_mood != SARCASTIC && current_mood != ROMANTIC && !skip_until_endif) {
             printf("Expression result: %d\n", (yyvsp[-1].expr_result).value); 
         }
     }
-#line 1378 "vibeparser.tab.c"
+#line 1420 "vibeparser.tab.c"
     break;
 
-  case 13: /* variable_decl: romantic_decl  */
-#line 245 "vibeparser.y"
+  case 14: /* variable_decl: romantic_decl  */
+#line 258 "vibeparser.y"
                   { if (!skip_until_endif) { printf("ROMANTIC DECL: %s\n", (yyvsp[0].str)); free((yyvsp[0].str)); } }
-#line 1384 "vibeparser.tab.c"
+#line 1426 "vibeparser.tab.c"
     break;
 
-  case 14: /* variable_decl: sarcastic_decl  */
-#line 246 "vibeparser.y"
+  case 15: /* variable_decl: sarcastic_decl  */
+#line 259 "vibeparser.y"
                      { if (!skip_until_endif) { printf("SARCASTIC DECL: %s\n", (yyvsp[0].str)); free((yyvsp[0].str)); } }
-#line 1390 "vibeparser.tab.c"
+#line 1432 "vibeparser.tab.c"
     break;
 
-  case 15: /* variable_decl: IDENTIFIER ASSIGN expression  */
-#line 247 "vibeparser.y"
+  case 16: /* variable_decl: IDENTIFIER ASSIGN expression  */
+#line 260 "vibeparser.y"
                                    { 
         if (!skip_until_endif) { 
             add_symbol((yyvsp[-2].str), (yyvsp[0].expr_result).value); 
             free((yyvsp[-2].str)); 
         } 
     }
-#line 1401 "vibeparser.tab.c"
+#line 1443 "vibeparser.tab.c"
     break;
 
-  case 16: /* variable_decl: IDENTIFIER ASSIGN STRING_LITERAL  */
-#line 253 "vibeparser.y"
+  case 17: /* variable_decl: IDENTIFIER ASSIGN STRING_LITERAL  */
+#line 266 "vibeparser.y"
                                        { 
         if (!skip_until_endif) { 
             add_string_symbol((yyvsp[-2].str), (yyvsp[0].str)); 
@@ -1409,11 +1451,11 @@ yyreduce:
             free((yyvsp[0].str)); 
         } 
     }
-#line 1413 "vibeparser.tab.c"
+#line 1455 "vibeparser.tab.c"
     break;
 
-  case 17: /* romantic_decl: LET identifier_term BE AS RADIANT AS THE NUMBER INTEGER  */
-#line 263 "vibeparser.y"
+  case 18: /* romantic_decl: LET identifier_term BE AS RADIANT AS THE NUMBER INTEGER  */
+#line 276 "vibeparser.y"
                                                             {
         (yyval.str) = malloc(100);
         sprintf((yyval.str), "int %s = %d;", (yyvsp[-7].str), (yyvsp[0].num));
@@ -1422,11 +1464,11 @@ yyreduce:
         }
         free((yyvsp[-7].str));
     }
-#line 1426 "vibeparser.tab.c"
+#line 1468 "vibeparser.tab.c"
     break;
 
-  case 18: /* sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW INTEGER SARCASTIC_REV  */
-#line 274 "vibeparser.y"
+  case 19: /* sarcastic_decl: SARCASTIC_WOW identifier_term IS SARCASTIC_NOW INTEGER SARCASTIC_REV  */
+#line 287 "vibeparser.y"
                                                                          {
         (yyval.str) = malloc(100);
         sprintf((yyval.str), "int %s = %d; // Revolutionary", (yyvsp[-4].str), (yyvsp[-1].num));
@@ -1435,11 +1477,11 @@ yyreduce:
         }
         free((yyvsp[-4].str));
     }
-#line 1439 "vibeparser.tab.c"
+#line 1481 "vibeparser.tab.c"
     break;
 
-  case 19: /* print_statement: PRINT print_value  */
-#line 285 "vibeparser.y"
+  case 20: /* print_statement: PRINT print_value  */
+#line 298 "vibeparser.y"
                       {
         if (!skip_until_endif) {
             if (current_mood == SARCASTIC) {
@@ -1490,27 +1532,27 @@ yyreduce:
         }
         free((yyvsp[0].str));
     }
-#line 1494 "vibeparser.tab.c"
+#line 1536 "vibeparser.tab.c"
     break;
 
-  case 20: /* print_value: expression  */
-#line 338 "vibeparser.y"
+  case 21: /* print_value: expression  */
+#line 351 "vibeparser.y"
                {
         char buffer[32];
         sprintf(buffer, "%d", (yyvsp[0].expr_result).value);
         (yyval.str) = strdup(buffer);
     }
-#line 1504 "vibeparser.tab.c"
+#line 1546 "vibeparser.tab.c"
     break;
 
-  case 21: /* print_value: STRING_LITERAL  */
-#line 343 "vibeparser.y"
+  case 22: /* print_value: STRING_LITERAL  */
+#line 356 "vibeparser.y"
                      { (yyval.str) = (yyvsp[0].str); }
-#line 1510 "vibeparser.tab.c"
+#line 1552 "vibeparser.tab.c"
     break;
 
-  case 22: /* print_value: identifier_term  */
-#line 344 "vibeparser.y"
+  case 23: /* print_value: identifier_term  */
+#line 357 "vibeparser.y"
                       {
         if (is_string_symbol((yyvsp[0].str))) {
             (yyval.str) = get_symbol_string((yyvsp[0].str));
@@ -1521,11 +1563,11 @@ yyreduce:
         }
         free((yyvsp[0].str));
     }
-#line 1525 "vibeparser.tab.c"
+#line 1567 "vibeparser.tab.c"
     break;
 
-  case 23: /* $@1: %empty  */
-#line 358 "vibeparser.y"
+  case 24: /* $@1: %empty  */
+#line 370 "vibeparser.y"
                       {
         condition_result = (yyvsp[-1].expr_result).value;
         if (!condition_result) {
@@ -1537,20 +1579,20 @@ yyreduce:
             start_if_statement((yyvsp[-1].expr_result).llvm_value);
         }
     }
-#line 1541 "vibeparser.tab.c"
+#line 1583 "vibeparser.tab.c"
     break;
 
-  case 24: /* if_statement: IF condition THEN $@1 if_block  */
-#line 368 "vibeparser.y"
+  case 25: /* if_statement: IF condition THEN $@1 if_block  */
+#line 380 "vibeparser.y"
                {
         skip_until_endif = 0;
         (yyval.num) = (yyvsp[0].num);
     }
-#line 1550 "vibeparser.tab.c"
+#line 1592 "vibeparser.tab.c"
     break;
 
-  case 25: /* if_block: if_true_block ENDIF  */
-#line 375 "vibeparser.y"
+  case 26: /* if_block: if_true_block ENDIF  */
+#line 387 "vibeparser.y"
                         { 
         (yyval.num) = condition_result; 
         // End if statement in LLVM IR
@@ -1558,11 +1600,11 @@ yyreduce:
             end_if_statement();
         }
     }
-#line 1562 "vibeparser.tab.c"
+#line 1604 "vibeparser.tab.c"
     break;
 
-  case 26: /* $@2: %empty  */
-#line 382 "vibeparser.y"
+  case 27: /* $@2: %empty  */
+#line 394 "vibeparser.y"
                          {
         if (condition_result) {
             skip_until_endif = 1;
@@ -1575,11 +1617,11 @@ yyreduce:
             handle_else();
         }
     }
-#line 1579 "vibeparser.tab.c"
+#line 1621 "vibeparser.tab.c"
     break;
 
-  case 27: /* if_block: if_true_block ELSE $@2 if_false_block ENDIF  */
-#line 393 "vibeparser.y"
+  case 28: /* if_block: if_true_block ELSE $@2 if_false_block ENDIF  */
+#line 405 "vibeparser.y"
                            {
         skip_until_endif = 0;
         (yyval.num) = condition_result;
@@ -1589,23 +1631,23 @@ yyreduce:
             end_if_statement();
         }
     }
-#line 1593 "vibeparser.tab.c"
+#line 1635 "vibeparser.tab.c"
     break;
 
-  case 28: /* if_true_block: statements  */
-#line 405 "vibeparser.y"
+  case 29: /* if_true_block: statements  */
+#line 417 "vibeparser.y"
                { (yyval.num) = condition_result; }
-#line 1599 "vibeparser.tab.c"
+#line 1641 "vibeparser.tab.c"
     break;
 
-  case 29: /* if_false_block: statements  */
-#line 409 "vibeparser.y"
+  case 30: /* if_false_block: statements  */
+#line 421 "vibeparser.y"
                { (yyval.num) = condition_result; }
-#line 1605 "vibeparser.tab.c"
+#line 1647 "vibeparser.tab.c"
     break;
 
-  case 30: /* condition: expression EQ expression  */
-#line 412 "vibeparser.y"
+  case 31: /* condition: expression EQ expression  */
+#line 425 "vibeparser.y"
                              { 
         int result = ((yyvsp[-2].expr_result).value == (yyvsp[0].expr_result).value);
         (yyval.expr_result).value = result;
@@ -1615,11 +1657,11 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1619 "vibeparser.tab.c"
+#line 1661 "vibeparser.tab.c"
     break;
 
-  case 31: /* condition: expression GT expression  */
-#line 421 "vibeparser.y"
+  case 32: /* condition: expression GT expression  */
+#line 434 "vibeparser.y"
                                { 
         int result = ((yyvsp[-2].expr_result).value > (yyvsp[0].expr_result).value);
         (yyval.expr_result).value = result;
@@ -1629,11 +1671,11 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1633 "vibeparser.tab.c"
+#line 1675 "vibeparser.tab.c"
     break;
 
-  case 32: /* condition: expression LT expression  */
-#line 430 "vibeparser.y"
+  case 33: /* condition: expression LT expression  */
+#line 443 "vibeparser.y"
                                { 
         int result = ((yyvsp[-2].expr_result).value < (yyvsp[0].expr_result).value);
         (yyval.expr_result).value = result;
@@ -1643,11 +1685,11 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1647 "vibeparser.tab.c"
+#line 1689 "vibeparser.tab.c"
     break;
 
-  case 33: /* condition: NOT condition  */
-#line 439 "vibeparser.y"
+  case 34: /* condition: NOT condition  */
+#line 452 "vibeparser.y"
                     { 
         (yyval.expr_result).value = !(yyvsp[0].expr_result).value;
         if (!skip_until_endif && (yyvsp[0].expr_result).llvm_value) {
@@ -1656,17 +1698,17 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1660 "vibeparser.tab.c"
+#line 1702 "vibeparser.tab.c"
     break;
 
-  case 34: /* condition: LPAREN condition RPAREN  */
-#line 447 "vibeparser.y"
+  case 35: /* condition: LPAREN condition RPAREN  */
+#line 460 "vibeparser.y"
                               { (yyval.expr_result) = (yyvsp[-1].expr_result); }
-#line 1666 "vibeparser.tab.c"
+#line 1708 "vibeparser.tab.c"
     break;
 
-  case 35: /* condition: expression  */
-#line 448 "vibeparser.y"
+  case 36: /* condition: expression  */
+#line 461 "vibeparser.y"
                  { 
         (yyval.expr_result).value = (yyvsp[0].expr_result).value != 0;
         if (!skip_until_endif && (yyvsp[0].expr_result).llvm_value) {
@@ -1676,17 +1718,17 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1680 "vibeparser.tab.c"
+#line 1722 "vibeparser.tab.c"
     break;
 
-  case 36: /* identifier_term: IDENTIFIER  */
-#line 460 "vibeparser.y"
+  case 37: /* identifier_term: IDENTIFIER  */
+#line 473 "vibeparser.y"
                { (yyval.str) = (yyvsp[0].str); }
-#line 1686 "vibeparser.tab.c"
+#line 1728 "vibeparser.tab.c"
     break;
 
-  case 37: /* expression: INTEGER  */
-#line 464 "vibeparser.y"
+  case 38: /* expression: INTEGER  */
+#line 477 "vibeparser.y"
             { 
         (yyval.expr_result).value = (yyvsp[0].num);
         if (!skip_until_endif) {
@@ -1695,11 +1737,11 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1699 "vibeparser.tab.c"
+#line 1741 "vibeparser.tab.c"
     break;
 
-  case 38: /* expression: identifier_term  */
-#line 472 "vibeparser.y"
+  case 39: /* expression: identifier_term  */
+#line 485 "vibeparser.y"
                       { 
         (yyval.expr_result).value = get_symbol_value((yyvsp[0].str));
         if (!skip_until_endif) {
@@ -1714,11 +1756,11 @@ yyreduce:
         }
         free((yyvsp[0].str));
     }
-#line 1718 "vibeparser.tab.c"
+#line 1760 "vibeparser.tab.c"
     break;
 
-  case 39: /* expression: expression PLUS expression  */
-#line 486 "vibeparser.y"
+  case 40: /* expression: expression PLUS expression  */
+#line 499 "vibeparser.y"
                                  { 
         (yyval.expr_result).value = (yyvsp[-2].expr_result).value + (yyvsp[0].expr_result).value;
         if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
@@ -1727,11 +1769,11 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1731 "vibeparser.tab.c"
+#line 1773 "vibeparser.tab.c"
     break;
 
-  case 40: /* expression: expression MINUS expression  */
-#line 494 "vibeparser.y"
+  case 41: /* expression: expression MINUS expression  */
+#line 507 "vibeparser.y"
                                   { 
         (yyval.expr_result).value = (yyvsp[-2].expr_result).value - (yyvsp[0].expr_result).value;
         if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
@@ -1740,11 +1782,11 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1744 "vibeparser.tab.c"
+#line 1786 "vibeparser.tab.c"
     break;
 
-  case 41: /* expression: expression TIMES expression  */
-#line 502 "vibeparser.y"
+  case 42: /* expression: expression TIMES expression  */
+#line 515 "vibeparser.y"
                                   { 
         (yyval.expr_result).value = (yyvsp[-2].expr_result).value * (yyvsp[0].expr_result).value;
         if (!skip_until_endif && (yyvsp[-2].expr_result).llvm_value && (yyvsp[0].expr_result).llvm_value) {
@@ -1753,11 +1795,11 @@ yyreduce:
             (yyval.expr_result).llvm_value = NULL;
         }
     }
-#line 1757 "vibeparser.tab.c"
+#line 1799 "vibeparser.tab.c"
     break;
 
-  case 42: /* expression: expression DIVIDE expression  */
-#line 510 "vibeparser.y"
+  case 43: /* expression: expression DIVIDE expression  */
+#line 523 "vibeparser.y"
                                    { 
         if ((yyvsp[0].expr_result).value == 0) {
             yyerror("Division by zero");
@@ -1772,11 +1814,11 @@ yyreduce:
             }
         }
     }
-#line 1776 "vibeparser.tab.c"
+#line 1818 "vibeparser.tab.c"
     break;
 
-  case 43: /* expression: expression MOD expression  */
-#line 524 "vibeparser.y"
+  case 44: /* expression: expression MOD expression  */
+#line 537 "vibeparser.y"
                                 {
         if ((yyvsp[0].expr_result).value == 0) {
             yyerror("Modulo by zero");
@@ -1791,17 +1833,114 @@ yyreduce:
             }
         }
     }
-#line 1795 "vibeparser.tab.c"
+#line 1837 "vibeparser.tab.c"
     break;
 
-  case 44: /* expression: LPAREN expression RPAREN  */
-#line 538 "vibeparser.y"
+  case 45: /* expression: LPAREN expression RPAREN  */
+#line 551 "vibeparser.y"
                                { (yyval.expr_result) = (yyvsp[-1].expr_result); }
-#line 1801 "vibeparser.tab.c"
+#line 1843 "vibeparser.tab.c"
+    break;
+
+  case 46: /* $@3: %empty  */
+#line 555 "vibeparser.y"
+                                                                                  {
+        if (!skip_until_endif) {
+            // Initialize loop
+            current_loop.loop_var = strdup((yyvsp[-4].str));
+            current_loop.start_value = (yyvsp[-2].expr_result).value;
+            current_loop.end_value = (yyvsp[0].expr_result).value;
+            current_loop.current_value = current_loop.start_value;
+            in_loop = 1;
+            
+            // Add loop variable to symbol table
+            add_symbol((yyvsp[-4].str), current_loop.current_value);
+            
+            // Mood-specific output
+            if (current_mood == SARCASTIC) {
+                printf("Oh great, another loop from %d to %d. How thrilling.\n", 
+                       current_loop.start_value, current_loop.end_value);
+            }
+            
+            // Execute loop manually
+            for (int i = current_loop.start_value; i <= current_loop.end_value; i++) {
+                current_loop.current_value = i;
+                add_symbol(current_loop.loop_var, i);
+                
+                // Since we can't easily re-execute statements in Bison, 
+                // we'll handle this in a simplified way for now
+                printf("Loop iteration: %s = %d\n", current_loop.loop_var, i);
+            }
+            
+            free(current_loop.loop_var);
+            in_loop = 0;
+        }
+        free((yyvsp[-4].str));
+    }
+#line 1881 "vibeparser.tab.c"
+    break;
+
+  case 47: /* for_statement: SARCASTIC_FOR IDENTIFIER SARCASTIC_WITH expression SARCASTIC_UNTIL expression $@3 statements SARCASTIC_NEXT  */
+#line 587 "vibeparser.y"
+                                {
+        if (!skip_until_endif && current_mood == SARCASTIC) {
+            printf("Wow, that loop is finally over. Shocking.\n");
+        }
+        (yyval.num) = 1;
+    }
+#line 1892 "vibeparser.tab.c"
+    break;
+
+  case 48: /* $@4: %empty  */
+#line 593 "vibeparser.y"
+                                                                                 {
+        if (!skip_until_endif) {
+            // Initialize loop
+            current_loop.loop_var = strdup((yyvsp[-4].str));
+            current_loop.start_value = (yyvsp[-2].expr_result).value;
+            current_loop.end_value = (yyvsp[0].expr_result).value;
+            current_loop.current_value = current_loop.start_value;
+            in_loop = 1;
+            
+            // Add loop variable to symbol table
+            add_symbol((yyvsp[-4].str), current_loop.current_value);
+            
+            if (current_mood == ROMANTIC) {
+                printf("Let us dance together, %s, from %d until %d, like lovers under the moonlight.\n", 
+                       (yyvsp[-4].str), current_loop.start_value, current_loop.end_value);
+            }
+            
+            // Execute loop manually
+            for (int i = current_loop.start_value; i <= current_loop.end_value; i++) {
+                current_loop.current_value = i;
+                add_symbol(current_loop.loop_var, i);
+                
+                // Since we can't easily re-execute statements in Bison, 
+                // we'll handle this in a simplified way for now
+                printf("Loop iteration: %s = %d\n", current_loop.loop_var, i);
+            }
+            
+            free(current_loop.loop_var);
+            in_loop = 0;
+        }
+        free((yyvsp[-4].str));
+    }
+#line 1929 "vibeparser.tab.c"
+    break;
+
+  case 49: /* for_statement: ROMANTIC_FOR IDENTIFIER ROMANTIC_WITH expression ROMANTIC_UNTIL expression $@4 statements ROMANTIC_NEXT  */
+#line 624 "vibeparser.y"
+                               {
+        if (!skip_until_endif && current_mood == ROMANTIC) {
+            printf("Our dance comes to an end, like a gentle sunset.\n");
+        }
+        (yyval.num) = 1;
+    }
+#line 1940 "vibeparser.tab.c"
     break;
 
 
-#line 1805 "vibeparser.tab.c"
+#line 1944 "vibeparser.tab.c"
 
       default: break;
     }
@@ -1994,7 +2133,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 541 "vibeparser.y"
+#line 632 "vibeparser.y"
 
 
 void yyerror(const char *s) {

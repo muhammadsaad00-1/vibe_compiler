@@ -45,7 +45,7 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 178 "vibeparser.y"
+#line 188 "vibeparser.y"
 
     #include "vibeparser_llvm.h"
 
@@ -92,7 +92,15 @@ extern int yydebug;
     NOT = 287,                     /* NOT  */
     INTEGER = 288,                 /* INTEGER  */
     IDENTIFIER = 289,              /* IDENTIFIER  */
-    STRING_LITERAL = 290           /* STRING_LITERAL  */
+    STRING_LITERAL = 290,          /* STRING_LITERAL  */
+    SARCASTIC_FOR = 291,           /* SARCASTIC_FOR  */
+    SARCASTIC_WITH = 292,          /* SARCASTIC_WITH  */
+    SARCASTIC_UNTIL = 293,         /* SARCASTIC_UNTIL  */
+    SARCASTIC_NEXT = 294,          /* SARCASTIC_NEXT  */
+    ROMANTIC_FOR = 295,            /* ROMANTIC_FOR  */
+    ROMANTIC_WITH = 296,           /* ROMANTIC_WITH  */
+    ROMANTIC_UNTIL = 297,          /* ROMANTIC_UNTIL  */
+    ROMANTIC_NEXT = 298            /* ROMANTIC_NEXT  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -101,13 +109,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 182 "vibeparser.y"
+#line 192 "vibeparser.y"
 
     int num;
     char *str;
     ExprResult expr_result;
 
-#line 111 "vibeparser.tab.h"
+#line 119 "vibeparser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

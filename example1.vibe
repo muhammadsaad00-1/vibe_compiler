@@ -1,0 +1,44 @@
+@mood("sarcastic")
+
+Wow x is now 4 Revolutionary;
+Wow y is now 5 Revolutionary;
+Wow result is now 0 Revolutionary;
+
+result = x + y;
+Shout "Oh wow, the sum is:";
+Shout result;
+
+result = x - y;
+Shout "The mind-blowing difference is:";
+Shout result;
+
+result = x * y;
+Shout "The groundbreaking product is:";
+Shout result;
+
+result = x / y;
+Shout "The earth-shattering division is:";
+Shout result;
+
+result = x % y;
+Shout "The life-changing remainder is:";
+Shout result;
+
+Wow name is now 0 Revolutionary;
+name = "Einstein";
+Shout "Oh hello there, ";
+Shout name;
+
+If x greater y Then
+    Shout "Wow, x is greater than y. Shocking.";
+EndIf
+
+If y greater x Then
+    Shout "This definitely won't print - y is NOT greater than x";
+Else
+    Shout "What a surprise, y is not greater than x";
+EndIf
+
+CycleThrough i WithThis 1 UntilItsNot 5
+    Proclaim i;
+NextIteration

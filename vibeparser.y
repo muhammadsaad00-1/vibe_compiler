@@ -298,9 +298,9 @@ print_statement:
     PRINT print_value {
         if (!skip_until_endif) {
             if (current_mood == SARCASTIC) {
-                printf("Oh wow, here's your output: %s", $2);
+                printf("Oh wow Mr coder, here's your output Mr Perfect Wanna Be: %s", $2);
             } else if (current_mood == ROMANTIC) {
-                printf("* softly whispers * %s", $2);
+                printf("❤️ softly romantically and quietly whispers * %s", $2);
             } else {
                 printf("Output: %s", $2);
             }

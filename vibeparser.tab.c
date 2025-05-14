@@ -1485,9 +1485,9 @@ yyreduce:
                       {
         if (!skip_until_endif) {
             if (current_mood == SARCASTIC) {
-                printf("Oh wow, here's your output: %s", (yyvsp[0].str));
+                printf("Oh wow Mr coder, here's your output Mr Perfect Wanna Be: %s", (yyvsp[0].str));
             } else if (current_mood == ROMANTIC) {
-                printf("* softly whispers * %s", (yyvsp[0].str));
+                printf("❤️ softly romantically and quietly whispers * %s", (yyvsp[0].str));
             } else {
                 printf("Output: %s", (yyvsp[0].str));
             }

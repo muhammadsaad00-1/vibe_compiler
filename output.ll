@@ -1,27 +1,27 @@
 ; ModuleID = 'vibeparser_module'
 source_filename = "vibeparser_module"
 
-@str_print = private unnamed_addr constant [8 x i8] c"Sum is:\00", align 1
+@str_print = private unnamed_addr constant [20 x i8] c"Oh wow, the sum is:\00", align 1
 @fmt = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @fmt.1 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-@str_print.2 = private unnamed_addr constant [15 x i8] c"Difference is:\00", align 1
+@str_print.2 = private unnamed_addr constant [32 x i8] c"The mind-blowing difference is:\00", align 1
 @fmt.3 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @fmt.4 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-@str_print.5 = private unnamed_addr constant [12 x i8] c"Product is:\00", align 1
+@str_print.5 = private unnamed_addr constant [31 x i8] c"The groundbreaking product is:\00", align 1
 @fmt.6 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @fmt.7 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-@str_print.8 = private unnamed_addr constant [13 x i8] c"Division is:\00", align 1
+@str_print.8 = private unnamed_addr constant [34 x i8] c"The earth-shattering division is:\00", align 1
 @fmt.9 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @fmt.10 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-@str_print.11 = private unnamed_addr constant [14 x i8] c"Remainder is:\00", align 1
+@str_print.11 = private unnamed_addr constant [32 x i8] c"The life-changing remainder is:\00", align 1
 @fmt.12 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @fmt.13 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-@str_lit = private unnamed_addr constant [5 x i8] c"Rose\00", align 1
-@str_print.14 = private unnamed_addr constant [18 x i8] c"Hello, beautiful \00", align 1
+@str_lit = private unnamed_addr constant [9 x i8] c"Einstein\00", align 1
+@str_print.14 = private unnamed_addr constant [17 x i8] c"Oh hello there, \00", align 1
 @fmt.15 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
-@str_print.16 = private unnamed_addr constant [5 x i8] c"Rose\00", align 1
+@str_print.16 = private unnamed_addr constant [9 x i8] c"Einstein\00", align 1
 @fmt.17 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
-@str_print.18 = private unnamed_addr constant [47 x i8] c"This shouldn't print - y is NOT greater than x\00", align 1
+@str_print.18 = private unnamed_addr constant [54 x i8] c"This definitely won't print - y is NOT greater than x\00", align 1
 @fmt.19 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @fmt.20 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
